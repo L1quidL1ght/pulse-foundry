@@ -117,7 +117,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
               <FormItem>
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Restaurant</FormLabel>
                 <FormControl>
-                  <Input placeholder="Name" {...field} className="bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40" />
+                  <Input placeholder="Name" {...field} className="text-sm bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -157,7 +157,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
                   <Input
                     placeholder="Q1 2024"
                     {...field}
-                    className="bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40"
+                    className="text-sm bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40"
                   />
                 </FormControl>
                 <FormMessage />
