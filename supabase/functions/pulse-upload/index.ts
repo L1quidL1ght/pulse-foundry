@@ -8,6 +8,7 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -15,12 +16,40 @@ serve(async (req) => {
   try {
     console.log('Starting pulse-upload function');
     
+    // Verify authentication
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Extract user from JWT
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('Authentication error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: corsHeaders }
+      );
+    }
+
+    // Parse multipart form data
     const formData = await req.formData();
     const restaurantName = formData.get('restaurant_name') as string;
     const reportType = formData.get('report_type') as string;
     const period = formData.get('period') as string;
     const file = formData.get('file') as File;
-    const userId = formData.get('user_id') as string | null;
+    // Use authenticated user ID instead of trusting client-provided value
+    const userId = user.id;
 
     console.log('Received upload:', { restaurantName, reportType, period, fileName: file?.name, userId });
 
@@ -60,11 +89,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Store file in Supabase Storage
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
@@ -179,13 +203,9 @@ Keep your response concise, data-driven, and actionable.`;
         dailySales: mockKPIs.dailySales,
         ppaTrend: mockKPIs.ppaTrend,
         categoryMix: mockKPIs.categorySales
-      }
+      },
+      user_id: userId  // Always set from authenticated user
     };
-    
-    // Add user_id if provided (for authenticated uploads)
-    if (userId) {
-      reportData.user_id = userId;
-    }
 
     console.log('Inserting report into database');
 
@@ -214,14 +234,18 @@ Keep your response concise, data-driven, and actionable.`;
     );
 
   } catch (error) {
-    console.error('Error in pulse-upload:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Upload processing failed';
-    const errorDetails = error instanceof Error ? error.toString() : String(error);
+    // Log full details server-side only
+    console.error('[pulse-upload] Error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
     
+    // Return generic message to client
     return new Response(
       JSON.stringify({ 
-        error: errorMessage,
-        details: errorDetails
+        error: 'Upload processing failed. Please try again or contact support if this persists.',
+        requestId: crypto.randomUUID()
       }),
       { 
         status: 500, 
