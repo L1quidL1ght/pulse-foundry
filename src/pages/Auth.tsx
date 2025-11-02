@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -55,15 +56,18 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <Card className="glass-panel w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">
-            {isSignUp ? "Create Account" : "Welcome Back"}
-          </h1>
-          <p className="text-muted-foreground">
-            {isSignUp ? "Sign up to start analyzing your data" : "Sign in to your account"}
-          </p>
-        </div>
+      <div className="w-full max-w-md">
+        <Logo />
+        
+        <Card className="glass-panel p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold mb-2">
+              {isSignUp ? "Create Account" : "Welcome Back"}
+            </h2>
+            <p className="text-muted-foreground">
+              {isSignUp ? "Sign up to start analyzing your data" : "Sign in to your account"}
+            </p>
+          </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -97,15 +101,16 @@ const Auth = () => {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="text-sm text-primary hover:underline"
-          >
-            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-          </button>
-        </div>
-      </Card>
+          <div className="mt-6 text-center">
+            <button
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+            </button>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };
