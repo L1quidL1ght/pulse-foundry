@@ -8,9 +8,11 @@ import { Card } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -23,24 +25,44 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = isSignUp 
-        ? await signUp(email, password)
-        : await signIn(email, password);
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
+      if (isResetPassword) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?reset=true`,
         });
-      } else {
-        if (isSignUp) {
+
+        if (error) {
           toast({
-            title: "Success",
-            description: "Account created! Please check your email to confirm.",
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
           });
         } else {
-          navigate("/dashboard");
+          toast({
+            title: "Success",
+            description: "Password reset link sent! Check your email.",
+          });
+          setIsResetPassword(false);
+        }
+      } else {
+        const { error } = isSignUp 
+          ? await signUp(email, password)
+          : await signIn(email, password);
+
+        if (error) {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          if (isSignUp) {
+            toast({
+              title: "Success",
+              description: "Account created! Please check your email to confirm.",
+            });
+          } else {
+            navigate("/dashboard");
+          }
         }
       }
     } catch (error: any) {
@@ -62,10 +84,14 @@ const Auth = () => {
         <Card className="glass-panel p-8">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-bold mb-2">
-              {isSignUp ? "Create Account" : "Welcome Back"}
+              {isResetPassword ? "Reset Password" : isSignUp ? "Create Account" : "Welcome Back"}
             </h2>
             <p className="text-muted-foreground">
-              {isSignUp ? "Sign up to start analyzing your data" : "Sign in to your account"}
+              {isResetPassword 
+                ? "Enter your email to receive a reset link" 
+                : isSignUp 
+                ? "Sign up to start analyzing your data" 
+                : "Sign in to your account"}
             </p>
           </div>
 
@@ -82,32 +108,57 @@ const Auth = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-          </div>
+          {!isResetPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSignUp ? "Sign Up" : "Sign In"}
+            {isResetPassword ? "Send Reset Link" : isSignUp ? "Sign Up" : "Sign In"}
           </Button>
         </form>
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
-            </button>
+          <div className="mt-6 space-y-3 text-center">
+            {!isResetPassword && !isSignUp && (
+              <button
+                onClick={() => setIsResetPassword(true)}
+                className="text-sm text-muted-foreground hover:text-primary"
+              >
+                Forgot password?
+              </button>
+            )}
+            
+            <div>
+              <button
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setIsResetPassword(false);
+                }}
+                className="text-sm text-primary hover:underline"
+              >
+                {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+              </button>
+            </div>
+            
+            {isResetPassword && (
+              <button
+                onClick={() => setIsResetPassword(false)}
+                className="text-sm text-muted-foreground hover:text-primary"
+              >
+                Back to sign in
+              </button>
+            )}
           </div>
         </Card>
       </div>
