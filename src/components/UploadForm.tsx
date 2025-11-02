@@ -1,3 +1,12 @@
+// ✅ only ONE config definition allowed
+export const config = {
+  auth: false,
+};
+
+import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -51,7 +60,6 @@ export const UploadForm = () => {
         method: "POST",
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: formData,
       });
