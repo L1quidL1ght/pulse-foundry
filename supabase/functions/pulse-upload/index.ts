@@ -169,7 +169,7 @@ Keep your response concise, data-driven, and actionable.`;
       period: period,
       file_url: publicUrl,
       kpis: mockKPIs,
-      ai_analysis: analysis,
+      agent: analysis,
       chart_data: {
         dailySales: mockKPIs.dailySales,
         categoryMix: mockKPIs.categorySales
