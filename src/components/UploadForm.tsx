@@ -9,8 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+
+const SUPABASE_FUNCTION_URL = "https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload";
+
+// Anon key is public by design; using it here unblocks auth header issues.
+const SUPABASE_ANON_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiaWp0d3pyaWlxeWtranZ4amt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjg0MTQsImV4cCI6MjA3NzY0NDQxNH0.3W9QzSuX10zXUHsWp8L13YsCfXKYbJXGW8CSY5W3wDs";
 
 const uploadSchema = z.object({
   restaurantName: z.string().min(1, "Required"),
@@ -39,41 +44,38 @@ export const UploadForm = () => {
       const file = data.file[0];
       setUploadProgress(30);
 
-      // Prepare the FormData correctly for upload
+      // Build multipart form-data
       const formData = new FormData();
       formData.append("restaurant_name", data.restaurantName);
       formData.append("report_type", data.reportType);
       formData.append("period", data.period);
       formData.append("file", file);
 
-      // Use fetch instead of supabase.functions.invoke()
-      const res = await fetch("https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload", {
+      // Call Edge Function directly with required headers
+      const res = await fetch(SUPABASE_FUNCTION_URL, {
         method: "POST",
         headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
         },
         body: formData,
       });
 
-      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
-      const uploadData = await res.json();
-
       setUploadProgress(80);
 
-      if (uploadError) throw uploadError;
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        throw new Error(errText || `Upload failed: ${res.status} ${res.statusText}`);
+      }
+
+      const uploadData = await res.json();
 
       setUploadProgress(100);
 
-      toast({
-        title: "Analysis complete",
-        description: "Data processed",
-      });
+      toast({ title: "Analysis complete", description: "Data processed" });
 
       localStorage.setItem("latestReport", JSON.stringify(uploadData));
-
-      setTimeout(() => {
-        navigate("/report");
-      }, 500);
+      setTimeout(() => navigate("/report"), 500);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -85,15 +87,6 @@ export const UploadForm = () => {
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
   };
 
   return (
