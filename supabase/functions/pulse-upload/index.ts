@@ -20,8 +20,9 @@ serve(async (req) => {
     const reportType = formData.get('report_type') as string;
     const period = formData.get('period') as string;
     const file = formData.get('file') as File;
+    const userId = formData.get('user_id') as string | null;
 
-    console.log('Received upload:', { restaurantName, reportType, period, fileName: file?.name });
+    console.log('Received upload:', { restaurantName, reportType, period, fileName: file?.name, userId });
 
     // Validate inputs
     if (!restaurantName || restaurantName.length > 100) {
@@ -167,7 +168,7 @@ Keep your response concise, data-driven, and actionable.`;
     };
 
     // Store in database
-    const reportData = {
+    const reportData: any = {
       restaurant_name: restaurantName,
       report_type: reportType,
       period: period,
@@ -180,6 +181,11 @@ Keep your response concise, data-driven, and actionable.`;
         categoryMix: mockKPIs.categorySales
       }
     };
+    
+    // Add user_id if provided (for authenticated uploads)
+    if (userId) {
+      reportData.user_id = userId;
+    }
 
     console.log('Inserting report into database');
 

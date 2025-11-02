@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -11,6 +11,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const uploadSchema = z.object({
   restaurantName: z.string().min(1, "Required"),
@@ -21,11 +22,16 @@ const uploadSchema = z.object({
 
 type UploadFormData = z.infer<typeof uploadSchema>;
 
-export const UploadForm = () => {
+interface UploadFormProps {
+  onUploadSuccess?: () => void;
+}
+
+export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user, session } = useAuth();
 
   const form = useForm<UploadFormData>({
     resolver: zodResolver(uploadSchema),
@@ -42,12 +48,23 @@ export const UploadForm = () => {
       formData.append("restaurant_name", data.restaurantName);
       formData.append("report_type", data.reportType);
       formData.append("period", data.period);
-      formData.append("file", file); // binary
+      formData.append("file", file);
+      
+      // Add user_id if authenticated
+      if (user?.id) {
+        formData.append("user_id", user.id);
+      }
+
+      const headers: HeadersInit = { "x-client-info": "lovable-uploader" };
+      
+      // Add auth header if user is logged in
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
 
       const res = await fetch("https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload", {
         method: "POST",
-        // DO NOT send Authorization or apikey when auth:false
-        headers: { "x-client-info": "lovable-uploader" },
+        headers,
         body: formData,
       });
 
@@ -55,17 +72,22 @@ export const UploadForm = () => {
       const uploadData = await res.json();
 
       setUploadProgress(100);
-      toast({ title: "Analysis complete", description: "Data processed" });
+      toast({ title: "Analysis complete", description: "Data processed successfully" });
       
-      // Extract and transform the report data
-      const reportData = {
-        kpis: uploadData.report.kpis,
-        agent: uploadData.report.agent,
-        chartData: uploadData.report.chart_data // Transform chart_data to chartData
-      };
+      // Call the success callback if provided
+      if (onUploadSuccess) {
+        onUploadSuccess();
+      }
       
-      localStorage.setItem("latestReport", JSON.stringify(reportData));
-      navigate("/report");
+      // Navigate to the report detail page
+      if (uploadData.report?.id) {
+        navigate(`/dashboard/${uploadData.report.id}`);
+      } else {
+        navigate("/dashboard");
+      }
+      
+      // Reset form
+      form.reset();
     } catch (error) {
       console.error("Upload error:", error);
       toast({ title: "Error", description: "Upload failed", variant: "destructive" });
