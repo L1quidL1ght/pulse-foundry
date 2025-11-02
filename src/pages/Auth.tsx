@@ -61,7 +61,7 @@ const Auth = () => {
               description: "Account created! Please check your email to confirm.",
             });
           } else {
-            navigate("/dashboard");
+            navigate("/reports");
           }
         }
       }

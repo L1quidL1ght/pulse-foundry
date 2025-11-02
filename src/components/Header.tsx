@@ -10,6 +10,14 @@ export const Header = () => {
   const { user, isAdmin, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const navLinks = [
+    { label: "Upload", href: "/dashboard" },
+    { label: "Reports", href: "/reports" },
+  ];
+
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(`${path}/`);
+
   const handleSignOut = async () => {
     await signOut();
     window.location.href = "/auth";
@@ -33,17 +41,19 @@ export const Header = () => {
             </SheetTrigger>
             <SheetContent side="left" className="w-64">
               <nav className="flex flex-col gap-4 mt-8">
-                <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)}>
-                  <Button 
-                    variant="ghost" 
-                    className={`w-full justify-start uppercase text-xs tracking-wider ${
-                      location.pathname.startsWith("/dashboard") ? "text-primary" : "text-muted-foreground hover:text-primary"
-                    }`}
-                  >
-                    Dashboard
-                  </Button>
-                </Link>
-                
+                {navLinks.map((item) => (
+                  <Link key={item.href} to={item.href} onClick={() => setMobileMenuOpen(false)}>
+                    <Button
+                      variant="ghost"
+                      className={`w-full justify-start uppercase text-xs tracking-wider ${
+                        isActive(item.href) ? "text-primary" : "text-muted-foreground hover:text-primary"
+                      }`}
+                    >
+                      {item.label}
+                    </Button>
+                  </Link>
+                ))}
+
                 {isAdmin && (
                   <Link to="/admin/pulse" onClick={() => setMobileMenuOpen(false)}>
                     <Button 
@@ -63,7 +73,7 @@ export const Header = () => {
         )}
 
         {/* Logo - Centered */}
-        <Link to={user ? "/dashboard" : "/auth"} className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
+        <Link to={user ? "/reports" : "/auth"} className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
             <div className="relative glass-panel rounded-2xl p-2 border-primary/30">
@@ -72,12 +82,43 @@ export const Header = () => {
           </div>
           <span className="text-2xl font-bold text-primary tracking-tight">Pulse</span>
         </Link>
-        
+
         {/* Right Side - Sign Out / Auth */}
         <div className="flex items-center gap-4">
+          {user && (
+            <nav className="hidden md:flex items-center gap-1">
+              {navLinks.map((item) => (
+                <Link key={item.href} to={item.href}>
+                  <Button
+                    variant="ghost"
+                    className={`uppercase text-xs tracking-wider ${
+                      isActive(item.href) ? "text-primary" : "text-muted-foreground hover:text-primary"
+                    }`}
+                  >
+                    {item.label}
+                  </Button>
+                </Link>
+              ))}
+              {isAdmin && (
+                <Link to="/admin/pulse">
+                  <Button
+                    variant="ghost"
+                    className={`uppercase text-xs tracking-wider flex items-center gap-2 ${
+                      location.pathname.startsWith("/admin")
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-primary"
+                    }`}
+                  >
+                    <Shield className="h-3 w-3" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
+            </nav>
+          )}
           {user ? (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               onClick={handleSignOut}
               className="text-muted-foreground hover:text-primary"

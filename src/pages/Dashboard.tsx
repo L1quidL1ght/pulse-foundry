@@ -112,7 +112,7 @@ const Dashboard = () => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => navigate(`/dashboard/${report.id}`)}
+                        onClick={() => navigate(`/report/${report.id}`)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         View

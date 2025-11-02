@@ -10,6 +10,7 @@ import ReportDetail from "./pages/ReportDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 import PulseUpload from "./pages/PulseUpload";
 import PulseReport from "./pages/PulseReport";
+import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,8 @@ const App = () => (
             <Route path="/" element={<Auth />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/report/:id" element={<ReportDetail />} />
             <Route path="/dashboard/:id" element={<ReportDetail />} />
             <Route path="/admin/pulse" element={<AdminDashboard />} />
             <Route path="/admin/pulse/:id" element={<ReportDetail />} />
