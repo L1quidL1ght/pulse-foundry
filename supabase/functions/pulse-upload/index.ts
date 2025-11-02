@@ -91,6 +91,28 @@ const findColumnIndex = (headers: string[], keywords: string[]): number => {
   return -1;
 };
 
+const findMatchingColumns = (
+  headers: string[],
+  keywordGroups: string[][],
+  excludeTokens: string[] = []
+): number[] =>
+  keywordGroups.reduce<number[]>((matched, group) => {
+    if (matched.length > 0) return matched;
+
+    const groupMatches = headers.reduce<number[]>((indices, header, index) => {
+      const matchesGroup = group.every((token) => header.includes(token));
+      const isExcluded = excludeTokens.some((token) => header.includes(token));
+
+      if (matchesGroup && !isExcluded) {
+        indices.push(index);
+      }
+
+      return indices;
+    }, []);
+
+    return groupMatches.length ? groupMatches : matched;
+  }, []);
+
 const parseFileRows = async (fileName: string, fileBuffer: ArrayBuffer): Promise<DataRow[]> => {
   if (fileName.endsWith(".csv")) {
     const text = new TextDecoder().decode(new Uint8Array(fileBuffer));
@@ -131,28 +153,49 @@ const computeMetrics = (rows: DataRow[]) => {
   const dataRows = rows.slice(1);
   const normalizedHeaders = headerRow.map((cell) => normalizeHeader(cell));
 
-  const netSalesIndex = findColumnIndex(normalizedHeaders, ["netsales", "totalsales", "sales"]);
-  const guestsIndex = findColumnIndex(normalizedHeaders, ["guests", "guestcount", "covers"]);
-  const tipsIndex = findColumnIndex(normalizedHeaders, ["tips", "gratuity", "tipamount"]);
-  const laborIndex = findColumnIndex(normalizedHeaders, ["labor", "laborcost", "payroll"]);
+  const netSalesColumns = findMatchingColumns(
+    normalizedHeaders,
+    [["net", "sales"], ["sales"]],
+    ["percent", "pct", "rate"]
+  );
+  const guestsColumns = findMatchingColumns(normalizedHeaders, [["guest"], ["cover"]]);
+  const tipsColumns = findMatchingColumns(normalizedHeaders, [["tip"], ["gratuity"]], ["percent", "pct", "rate"]);
+  const laborColumns = findMatchingColumns(normalizedHeaders, [["labor"], ["laborcost"]], ["percent", "pct", "rate"]);
   const dateIndex = findColumnIndex(normalizedHeaders, ["date", "businessdate", "day"]);
 
-  let netSalesSum: number | null = netSalesIndex !== -1 ? 0 : null;
+  let netSalesSum: number | null = netSalesColumns.length ? 0 : null;
   let netSalesCount = 0;
-  let guestsSum: number | null = guestsIndex !== -1 ? 0 : null;
+  let guestsSum: number | null = guestsColumns.length ? 0 : null;
   let guestsCount = 0;
-  let tipsSum: number | null = tipsIndex !== -1 ? 0 : null;
+  let tipsSum: number | null = tipsColumns.length ? 0 : null;
   let tipsCount = 0;
-  let laborSum: number | null = laborIndex !== -1 ? 0 : null;
+  let laborSum: number | null = laborColumns.length ? 0 : null;
   let laborCount = 0;
 
   const dailySalesMap = new Map<string, { sales: number; guests: number }>();
 
   for (const row of dataRows) {
-    const netSalesValue = netSalesIndex !== -1 ? parseNumeric(row[netSalesIndex]) : null;
-    const guestsValue = guestsIndex !== -1 ? parseNumeric(row[guestsIndex]) : null;
-    const tipsValue = tipsIndex !== -1 ? parseNumeric(row[tipsIndex]) : null;
-    const laborValue = laborIndex !== -1 ? parseNumeric(row[laborIndex]) : null;
+    const sumColumns = (columns: number[]): number | null => {
+      let total: number | null = null;
+
+      for (const columnIndex of columns) {
+        const parsedValue = parseNumeric(row[columnIndex]);
+        if (parsedValue === null) continue;
+
+        if (total === null) {
+          total = parsedValue;
+        } else {
+          total += parsedValue;
+        }
+      }
+
+      return total;
+    };
+
+    const netSalesValue = sumColumns(netSalesColumns);
+    const guestsValue = sumColumns(guestsColumns);
+    const tipsValue = sumColumns(tipsColumns);
+    const laborValue = sumColumns(laborColumns);
 
     if (netSalesSum !== null && netSalesValue !== null) {
       netSalesSum += netSalesValue;
