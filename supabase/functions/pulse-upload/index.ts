@@ -121,32 +121,83 @@ serve(async (req) => {
     let headers: string[] = [];
     let dataRows: any[] = [];
     
-    // Helper function to find net sales column index (excludes gross)
-    const findNetSalesColumnIndex = (headers: string[]): number => {
-      const netPatterns = ['net sales', 'net', 'sales (net)', 'sales(net)'];
-      
-      // First, filter out any headers containing "gross"
-      const filteredHeaders = headers.map((h, idx) => ({
-        header: String(h || '').toLowerCase().trim(),
-        index: idx,
-        isGross: String(h || '').toLowerCase().includes('gross')
-      }));
-      
-      // Find best match for net sales, excluding gross
-      for (const pattern of netPatterns) {
-        const match = filteredHeaders.find(h => 
-          !h.isGross && h.header.includes(pattern)
-        );
+    type HeaderMeta = {
+      original: string;
+      normalized: string;
+      index: number;
+      isGross: boolean;
+    };
+
+    type ParsedSalesRow = {
+      date: string;
+      category: string;
+      netSales: number;
+      guests: number;
+    };
+
+    const normalizeHeader = (header: any): string =>
+      String(header ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+    const buildHeaderMeta = (headers: any[]): HeaderMeta[] =>
+      headers.map((header, index) => {
+        const normalized = normalizeHeader(header);
+        return {
+          original: String(header ?? ''),
+          normalized,
+          index,
+          isGross: normalized.includes('gross')
+        };
+      });
+
+    const findColumnIndex = (
+      meta: HeaderMeta[],
+      patterns: (string | RegExp)[],
+      fallbackIndex: number | null = null,
+      options: { exclude?: number[] } = {}
+    ): number => {
+      const exclude = new Set(options.exclude ?? []);
+
+      for (const pattern of patterns) {
+        const match = meta.find(column => {
+          if (column.isGross || exclude.has(column.index)) return false;
+          if (typeof pattern === 'string') {
+            return column.normalized.includes(pattern);
+          }
+          return pattern.test(column.normalized);
+        });
+
         if (match) return match.index;
       }
-      
-      // Fallback: find any "sales" column that isn't gross
-      const salesMatch = filteredHeaders.find(h => 
-        !h.isGross && h.header.includes('sales')
-      );
-      return salesMatch?.index ?? -1;
+
+      if (typeof fallbackIndex === 'number' && fallbackIndex >= 0) {
+        const fallbackColumn = meta.find(column =>
+          column.index === fallbackIndex &&
+          !column.isGross &&
+          !exclude.has(column.index)
+        );
+        if (fallbackColumn) return fallbackIndex;
+      }
+
+      return -1;
     };
-    
+
+    const findNetSalesColumnIndex = (meta: HeaderMeta[]): number => {
+      const netPatterns = [
+        /net\s*sales/,
+        /sales\s*\(net\)/,
+        /sales\s*net/,
+        /net\s*revenue/,
+        /\bnet\b.*sales/,
+        /sales.*\bnet\b/
+      ];
+
+      const match = findColumnIndex(meta, netPatterns);
+      if (match !== -1) return match;
+
+      // Fallback: find any "sales" column that isn't gross
+      return findColumnIndex(meta, [/sales/]);
+    };
+
     // Helper function to parse numeric value
     const parseNumeric = (val: any): number => {
       if (!val) return 0;
@@ -154,6 +205,121 @@ serve(async (req) => {
       const cleaned = String(val).replace(/[$,\s]/g, '');
       const num = parseFloat(cleaned);
       return isNaN(num) ? 0 : num;
+    };
+
+    const parseItemSales = (
+      headers: any[],
+      dataRows: any[][]
+    ): { rows: ParsedSalesRow[]; meta: { netSalesIdx: number; guestIdx: number; dateIdx: number; categoryIdx: number } } => {
+      const headerMeta = buildHeaderMeta(headers);
+      const netSalesIdx = findNetSalesColumnIndex(headerMeta);
+
+      if (netSalesIdx === -1) {
+        throw new Error('Could not find net sales column in the data. Please ensure your file has a "Net Sales" column.');
+      }
+
+      let dateIdx = findColumnIndex(
+        headerMeta,
+        [/business date/, /service date/, /date/, /day/],
+        0,
+        { exclude: [netSalesIdx] }
+      );
+
+      if (dateIdx === -1) {
+        const fallbackDate = headerMeta.find(column =>
+          column.index !== netSalesIdx && !column.isGross
+        );
+        dateIdx = fallbackDate ? fallbackDate.index : -1;
+      }
+
+      let categoryIdx = findColumnIndex(
+        headerMeta,
+        [/category/, /menu category/, /item/, /product/, /description/],
+        1,
+        { exclude: [netSalesIdx, dateIdx].filter(idx => idx >= 0) }
+      );
+
+      if (categoryIdx === -1) {
+        const fallbackCategory = headerMeta.find(column =>
+          column.index !== netSalesIdx &&
+          column.index !== dateIdx &&
+          !column.isGross
+        );
+        categoryIdx = fallbackCategory ? fallbackCategory.index : -1;
+      }
+
+      let guestIdx = findColumnIndex(
+        headerMeta,
+        [/guests?/, /covers?/],
+        null,
+        { exclude: [netSalesIdx] }
+      );
+
+      if (guestIdx === -1) {
+        const adjacentColumn = headerMeta.find(column =>
+          column.index === netSalesIdx + 1 && !column.isGross
+        );
+        if (adjacentColumn) {
+          guestIdx = adjacentColumn.index;
+        }
+      }
+
+      const rows = dataRows
+        .map(row => {
+          const netSales = parseNumeric(row[netSalesIdx]);
+          const guests = guestIdx !== -1 ? parseNumeric(row[guestIdx]) : 0;
+          const dateValue = dateIdx !== -1 ? row[dateIdx] : '';
+          const categoryValue = categoryIdx !== -1 ? row[categoryIdx] : '';
+
+          return {
+            date: String(dateValue ?? '').trim(),
+            category: String(categoryValue ?? '').trim(),
+            netSales,
+            guests
+          };
+        })
+        .filter(row => row.netSales > 0 || row.guests > 0);
+
+      return {
+        rows,
+        meta: {
+          netSalesIdx,
+          guestIdx,
+          dateIdx,
+          categoryIdx
+        }
+      };
+    };
+
+    const parseCategoryRollup = (rows: ParsedSalesRow[]): Map<string, number> => {
+      const categoryMap = new Map<string, number>();
+
+      rows.forEach(row => {
+        if (!row.category || row.netSales <= 0) return;
+
+        const current = categoryMap.get(row.category) ?? 0;
+        categoryMap.set(row.category, current + row.netSales);
+      });
+
+      return categoryMap;
+    };
+
+    const parseDailyRollup = (
+      rows: ParsedSalesRow[]
+    ): Map<string, { sales: number; guests: number }> => {
+      const dailyMap = new Map<string, { sales: number; guests: number }>();
+
+      rows.forEach(row => {
+        if (!row.date) return;
+
+        const current = dailyMap.get(row.date) ?? { sales: 0, guests: 0 };
+        dailyMap.set(row.date, {
+          sales: current.sales + row.netSales,
+          guests: current.guests + row.guests
+        });
+      });
+
+      return dailyMap;
     };
     
     // Helper to detect if a row is likely a header row
@@ -211,50 +377,22 @@ serve(async (req) => {
       ) as any[][];
     }
     
-    const netSalesIdx = findNetSalesColumnIndex(headers);
-    
+    const { rows: parsedRows, meta: parsedMeta } = parseItemSales(headers, dataRows);
+
     console.log('File headers:', headers);
-    console.log('Using net sales column index:', netSalesIdx);
-    
-    if (netSalesIdx === -1) {
-      throw new Error('Could not find net sales column in the data. Please ensure your file has a "Net Sales" column.');
-    }
-    
-    // Parse data rows
-    const parsedRows = dataRows.map(values => ({
-      date: String(values[0] || ''),
-      netSales: parseNumeric(values[netSalesIdx]),
-      guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
-      category: values.length > 1 ? String(values[1] || '') : ''
-    })).filter(row => row.netSales > 0 || row.guests > 0);
-    
+    console.log('Using net sales column index:', parsedMeta.netSalesIdx);
     console.log(`Parsed ${parsedRows.length} data rows (gross sales excluded)`);
-    
+
     // Compute KPIs from net sales data only
     const totalNetSales = parsedRows.reduce((sum, row) => sum + row.netSales, 0);
     const totalGuests = parsedRows.reduce((sum, row) => sum + row.guests, 0);
     const avgPPA = totalGuests > 0 ? totalNetSales / totalGuests : 0;
     
     // Group by category for category mix
-    const categoryMap = new Map<string, number>();
-    parsedRows.forEach(row => {
-      if (row.category && row.netSales > 0) {
-        const current = categoryMap.get(row.category) || 0;
-        categoryMap.set(row.category, current + row.netSales);
-      }
-    });
+    const categoryMap = parseCategoryRollup(parsedRows);
     
     // Daily aggregation for charts
-    const dailyMap = new Map<string, { sales: number; guests: number }>();
-    parsedRows.forEach(row => {
-      if (row.date) {
-        const current = dailyMap.get(row.date) || { sales: 0, guests: 0 };
-        dailyMap.set(row.date, {
-          sales: current.sales + row.netSales,
-          guests: current.guests + row.guests
-        });
-      }
-    });
+    const dailyMap = parseDailyRollup(parsedRows);
     
     const mockKPIs = {
       netSales: totalNetSales > 0 ? totalNetSales : 125430.50,
