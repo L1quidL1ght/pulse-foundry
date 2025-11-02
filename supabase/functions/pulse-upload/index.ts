@@ -109,6 +109,10 @@ serve(async (req) => {
       dailySales: Array.from({ length: 7 }, (_, i) => ({
         date: `2024-11-${String(i + 1).padStart(2, '0')}`,
         sales: 15000 + Math.random() * 5000
+      })),
+      ppaTrend: Array.from({ length: 7 }, (_, i) => ({
+        date: `2024-11-${String(i + 1).padStart(2, '0')}`,
+        ppa: 95 + Math.random() * 15
       }))
     };
 
@@ -172,6 +176,7 @@ Keep your response concise, data-driven, and actionable.`;
       agent: analysis,
       chart_data: {
         dailySales: mockKPIs.dailySales,
+        ppaTrend: mockKPIs.ppaTrend,
         categoryMix: mockKPIs.categorySales
       }
     };

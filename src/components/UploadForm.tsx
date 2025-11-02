@@ -56,7 +56,15 @@ export const UploadForm = () => {
 
       setUploadProgress(100);
       toast({ title: "Analysis complete", description: "Data processed" });
-      localStorage.setItem("latestReport", JSON.stringify(uploadData));
+      
+      // Extract and transform the report data
+      const reportData = {
+        kpis: uploadData.report.kpis,
+        agent: uploadData.report.agent,
+        chartData: uploadData.report.chart_data // Transform chart_data to chartData
+      };
+      
+      localStorage.setItem("latestReport", JSON.stringify(reportData));
       navigate("/report");
     } catch (error) {
       console.error("Upload error:", error);
