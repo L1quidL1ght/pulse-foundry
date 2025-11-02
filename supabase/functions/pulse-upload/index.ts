@@ -114,8 +114,8 @@ serve(async (req) => {
 
     console.log('Computed KPIs:', mockKPIs);
 
-    // Call Lovable AI for analysis
-    const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+    // Call OpenAI for analysis
+    const openAIKey = Deno.env.get('OPENAI_API_KEY');
     const systemPrompt = Deno.env.get('PULSE_SYSTEM_PROMPT') || `You are a restaurant analytics expert. Analyze the provided KPIs and provide:
 - A brief 2-3 sentence summary
 - 3 key insights (bullet points)
@@ -123,16 +123,16 @@ serve(async (req) => {
 
 Keep your response concise, data-driven, and actionable.`;
 
-    console.log('Calling Lovable AI for analysis');
+    console.log('Calling OpenAI for analysis');
 
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openAIKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'gpt-4o-mini',
         messages: [
           { role: 'system', content: systemPrompt },
           { 
@@ -145,8 +145,8 @@ Keep your response concise, data-driven, and actionable.`;
 
     if (!aiResponse.ok) {
       const errorText = await aiResponse.text();
-      console.error('Lovable AI API error:', errorText);
-      throw new Error(`Lovable AI API failed: ${aiResponse.status}`);
+      console.error('OpenAI API error:', errorText);
+      throw new Error(`OpenAI API failed: ${aiResponse.status}`);
     }
 
     const aiData = await aiResponse.json();
