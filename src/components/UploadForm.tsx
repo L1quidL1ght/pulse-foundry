@@ -51,6 +51,7 @@ export const UploadForm = () => {
         method: "POST",
         headers: {
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
         body: formData,
       });
@@ -160,45 +161,25 @@ export const UploadForm = () => {
             name="file"
             render={({ field: { onChange, value, ...field } }) => (
               <FormItem>
-                <FormField
-                  control={form.control}
-                  name="file"
-                  render={({ field: { onChange, value, ...field } }) => (
-                    <FormItem>
-                      <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">
-                        Data File
-                      </FormLabel>
-                      <FormControl>
-                        <div
-                          className="relative group"
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            const files = e.dataTransfer.files;
-                            if (files?.length) onChange(files);
-                          }}
-                        >
-                          <label className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer w-full text-center">
-                            <Upload className="w-8 h-8 text-primary" />
-                            {value?.length ? (
-                              <p className="text-sm text-foreground font-medium">{value[0].name}</p>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">Drag or click to upload CSV/XLSX</p>
-                            )}
-                            <Input
-                              type="file"
-                              accept=".csv,.xlsx,.xls"
-                              onChange={(e) => onChange(e.target.files)}
-                              {...field}
-                              className="absolute inset-0 opacity-0 cursor-pointer"
-                            />
-                          </label>
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
+                <FormControl>
+                  <div className="relative group">
+                    <div className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
+                      <Input
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        onChange={(e) => onChange(e.target.files)}
+                        {...field}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Upload className="w-8 h-8 text-primary" />
+                        <p className="text-sm text-muted-foreground">CSV, XLSX</p>
+                      </div>
+                    </div>
+                  </div>
+                </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
