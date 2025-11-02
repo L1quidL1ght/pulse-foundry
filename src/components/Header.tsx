@@ -74,14 +74,15 @@ export const Header = () => {
           </Sheet>
         )}
 
-        {/* Logo */}
-        <Link to={user ? "/dashboard" : "/auth"} className="flex items-center">
+        {/* Logo - Centered */}
+        <Link to={user ? "/dashboard" : "/auth"} className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
             <div className="relative glass-panel rounded-2xl p-2 border-primary/30">
               <Activity className="w-6 h-6 text-primary" strokeWidth={2.5} />
             </div>
           </div>
+          <span className="text-2xl font-bold text-primary tracking-tight">Pulse</span>
         </Link>
         
         {/* Desktop Navigation */}
