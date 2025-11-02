@@ -9,13 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-
-const SUPABASE_FUNCTION_URL = "https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload";
-
-// Anon key is public by design; using it here unblocks auth header issues.
-const SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZiaWp0d3pyaWlxeWtranZ4amt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIwNjg0MTQsImV4cCI6MjA3NzY0NDQxNH0.3W9QzSuX10zXUHsWp8L13YsCfXKYbJXGW8CSY5W3wDs";
 
 const uploadSchema = z.object({
   restaurantName: z.string().min(1, "Required"),
@@ -44,38 +39,41 @@ export const UploadForm = () => {
       const file = data.file[0];
       setUploadProgress(30);
 
-      // Build multipart form-data
+      // Prepare the FormData correctly for upload
       const formData = new FormData();
       formData.append("restaurant_name", data.restaurantName);
       formData.append("report_type", data.reportType);
       formData.append("period", data.period);
       formData.append("file", file);
 
-      // Call Edge Function directly with required headers
-      const res = await fetch(SUPABASE_FUNCTION_URL, {
+      // Use fetch instead of supabase.functions.invoke()
+      const res = await fetch("https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload", {
         method: "POST",
         headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
         },
         body: formData,
       });
 
+      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+      const uploadData = await res.json();
+
       setUploadProgress(80);
 
-      if (!res.ok) {
-        const errText = await res.text().catch(() => res.statusText);
-        throw new Error(errText || `Upload failed: ${res.status} ${res.statusText}`);
-      }
-
-      const uploadData = await res.json();
+      if (uploadError) throw uploadError;
 
       setUploadProgress(100);
 
-      toast({ title: "Analysis complete", description: "Data processed" });
+      toast({
+        title: "Analysis complete",
+        description: "Data processed",
+      });
 
       localStorage.setItem("latestReport", JSON.stringify(uploadData));
-      setTimeout(() => navigate("/report"), 500);
+
+      setTimeout(() => {
+        navigate("/report");
+      }, 500);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -87,6 +85,15 @@ export const UploadForm = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
   };
 
   return (
@@ -153,25 +160,45 @@ export const UploadForm = () => {
             name="file"
             render={({ field: { onChange, value, ...field } }) => (
               <FormItem>
-                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
-                <FormControl>
-                  <div className="relative group">
-                    <div className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
-                      <Input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={(e) => onChange(e.target.files)}
-                        {...field}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Upload className="w-8 h-8 text-primary" />
-                        <p className="text-sm text-muted-foreground">CSV, XLSX</p>
-                      </div>
-                    </div>
-                  </div>
-                </FormControl>
-                <FormMessage />
+                <FormField
+                  control={form.control}
+                  name="file"
+                  render={({ field: { onChange, value, ...field } }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Data File
+                      </FormLabel>
+                      <FormControl>
+                        <div
+                          className="relative group"
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const files = e.dataTransfer.files;
+                            if (files?.length) onChange(files);
+                          }}
+                        >
+                          <label className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all flex flex-col items-center justify-center gap-2 cursor-pointer w-full text-center">
+                            <Upload className="w-8 h-8 text-primary" />
+                            {value?.length ? (
+                              <p className="text-sm text-foreground font-medium">{value[0].name}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">Drag or click to upload CSV/XLSX</p>
+                            )}
+                            <Input
+                              type="file"
+                              accept=".csv,.xlsx,.xls"
+                              onChange={(e) => onChange(e.target.files)}
+                              {...field}
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                            />
+                          </label>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </FormItem>
             )}
           />
