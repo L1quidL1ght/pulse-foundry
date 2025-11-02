@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+import * as XLSX from 'https://esm.sh/xlsx@0.18.5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -116,8 +117,9 @@ serve(async (req) => {
     console.log('File uploaded successfully:', publicUrl);
 
     // Parse file and compute KPIs
-    const fileText = await file.text();
-    const lines = fileText.split('\n').filter(l => l.trim());
+    const parsedBuffer = new Uint8Array(fileBuffer);
+    let headers: string[] = [];
+    let dataRows: any[] = [];
     
     // Helper function to find net sales column index (excludes gross)
     const findNetSalesColumnIndex = (headers: string[]): number => {
@@ -125,9 +127,9 @@ serve(async (req) => {
       
       // First, filter out any headers containing "gross"
       const filteredHeaders = headers.map((h, idx) => ({
-        header: h.toLowerCase().trim(),
+        header: String(h || '').toLowerCase().trim(),
         index: idx,
-        isGross: h.toLowerCase().includes('gross')
+        isGross: String(h || '').toLowerCase().includes('gross')
       }));
       
       // Find best match for net sales, excluding gross
@@ -146,45 +148,66 @@ serve(async (req) => {
     };
     
     // Helper function to parse numeric value
-    const parseNumeric = (val: string): number => {
+    const parseNumeric = (val: any): number => {
       if (!val) return 0;
-      const cleaned = val.replace(/[$,\s]/g, '');
+      if (typeof val === 'number') return val;
+      const cleaned = String(val).replace(/[$,\s]/g, '');
       const num = parseFloat(cleaned);
       return isNaN(num) ? 0 : num;
     };
     
-    // Parse CSV data
-    const headers = lines[0].split(',').map(h => h.trim());
+    // Parse based on file type
+    if (fileName.endsWith('.csv')) {
+      // Parse CSV
+      const fileText = new TextDecoder().decode(parsedBuffer);
+      const lines = fileText.split('\n').filter(l => l.trim());
+      headers = lines[0].split(',').map(h => h.trim());
+      
+      dataRows = lines.slice(1).map(line => {
+        const values = line.split(',').map(v => v.trim());
+        return values;
+      });
+    } else {
+      // Parse Excel
+      const workbook = XLSX.read(parsedBuffer, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+      
+      if (jsonData.length === 0) {
+        throw new Error('Excel file is empty');
+      }
+      
+      headers = (jsonData[0] as any[]).map(h => String(h || ''));
+      dataRows = jsonData.slice(1) as any[][];
+    }
+    
     const netSalesIdx = findNetSalesColumnIndex(headers);
     
-    console.log('CSV headers:', headers);
+    console.log('File headers:', headers);
     console.log('Using net sales column index:', netSalesIdx);
     
     if (netSalesIdx === -1) {
-      throw new Error('Could not find net sales column in the data');
+      throw new Error('Could not find net sales column in the data. Please ensure your file has a "Net Sales" column.');
     }
     
-    // Parse data rows (skip header)
-    const dataRows = lines.slice(1).map(line => {
-      const values = line.split(',').map(v => v.trim());
-      return {
-        date: values[0] || '',
-        netSales: parseNumeric(values[netSalesIdx]),
-        guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
-        category: values.length > 1 ? values[1] : ''
-      };
-    }).filter(row => row.netSales > 0 || row.guests > 0);
+    // Parse data rows
+    const parsedRows = dataRows.map(values => ({
+      date: String(values[0] || ''),
+      netSales: parseNumeric(values[netSalesIdx]),
+      guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
+      category: values.length > 1 ? String(values[1] || '') : ''
+    })).filter(row => row.netSales > 0 || row.guests > 0);
     
-    console.log(`Parsed ${dataRows.length} data rows (gross sales excluded)`);
+    console.log(`Parsed ${parsedRows.length} data rows (gross sales excluded)`);
     
     // Compute KPIs from net sales data only
-    const totalNetSales = dataRows.reduce((sum, row) => sum + row.netSales, 0);
-    const totalGuests = dataRows.reduce((sum, row) => sum + row.guests, 0);
+    const totalNetSales = parsedRows.reduce((sum, row) => sum + row.netSales, 0);
+    const totalGuests = parsedRows.reduce((sum, row) => sum + row.guests, 0);
     const avgPPA = totalGuests > 0 ? totalNetSales / totalGuests : 0;
     
     // Group by category for category mix
     const categoryMap = new Map<string, number>();
-    dataRows.forEach(row => {
+    parsedRows.forEach(row => {
       if (row.category && row.netSales > 0) {
         const current = categoryMap.get(row.category) || 0;
         categoryMap.set(row.category, current + row.netSales);
@@ -193,7 +216,7 @@ serve(async (req) => {
     
     // Daily aggregation for charts
     const dailyMap = new Map<string, { sales: number; guests: number }>();
-    dataRows.forEach(row => {
+    parsedRows.forEach(row => {
       if (row.date) {
         const current = dailyMap.get(row.date) || { sales: 0, guests: 0 };
         dailyMap.set(row.date, {
@@ -207,8 +230,8 @@ serve(async (req) => {
       netSales: totalNetSales > 0 ? totalNetSales : 125430.50,
       guests: totalGuests > 0 ? totalGuests : 1247,
       ppa: avgPPA > 0 ? avgPPA : 100.58,
-      tipPercent: 18.5, // Would need tip column in CSV
-      laborPercent: 28.3, // Would need labor data in CSV
+      tipPercent: 18.5, // Would need tip column in file
+      laborPercent: 28.3, // Would need labor data in file
       categorySales: categoryMap.size > 0 
         ? Object.fromEntries(categoryMap)
         : { 'Food': 75000, 'Beverage': 35000, 'Desserts': 15430.50 },
