@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -23,13 +23,13 @@ const Auth = () => {
   const { toast } = useToast();
 
   // Check if user is coming from password reset email
-  useState(() => {
+  useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     const type = hashParams.get('type');
     if (type === 'recovery') {
       setIsSettingNewPassword(true);
     }
-  });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
