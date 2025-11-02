@@ -39,32 +39,28 @@ export const UploadForm = () => {
       const file = data.file[0];
       setUploadProgress(30);
 
+      const formData = new FormData();
+      formData.append("restaurant_name", data.restaurantName);
+      formData.append("report_type", data.reportType);
+      formData.append("period", data.period);
+      formData.append("file", file);
+
       const { data: uploadData, error: uploadError } = await supabase.functions.invoke("pulse-upload", {
-        body: {
-          restaurantName: data.restaurantName,
-          reportType: data.reportType,
-          period: data.period,
-          fileName: file.name,
-          fileData: await fileToBase64(file),
-        },
+        body: formData,
       });
 
       setUploadProgress(80);
-
       if (uploadError) throw uploadError;
 
       setUploadProgress(100);
-      
+
       toast({
         title: "Analysis complete",
         description: "Data processed",
       });
 
       localStorage.setItem("latestReport", JSON.stringify(uploadData));
-      
-      setTimeout(() => {
-        navigate("/report");
-      }, 500);
+      setTimeout(() => navigate("/report"), 500);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -78,15 +74,6 @@ export const UploadForm = () => {
     }
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-    });
-  };
-
   return (
     <div className="glass-panel rounded-2xl p-8 max-w-2xl mx-auto">
       <Form {...form}>
@@ -98,11 +85,7 @@ export const UploadForm = () => {
               <FormItem>
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Restaurant</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Name" 
-                    {...field} 
-                    className="bg-muted/50 border-primary/20 focus:border-primary"
-                  />
+                  <Input placeholder="Name" {...field} className="bg-muted/50 border-primary/20 focus:border-primary" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -139,9 +122,9 @@ export const UploadForm = () => {
               <FormItem>
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Period</FormLabel>
                 <FormControl>
-                  <Input 
-                    placeholder="Q1 2024" 
-                    {...field} 
+                  <Input
+                    placeholder="Q1 2024"
+                    {...field}
                     className="bg-muted/50 border-primary/20 focus:border-primary"
                   />
                 </FormControl>
@@ -188,9 +171,9 @@ export const UploadForm = () => {
             </div>
           )}
 
-          <Button 
-            type="submit" 
-            disabled={isUploading} 
+          <Button
+            type="submit"
+            disabled={isUploading}
             className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
           >
             {isUploading ? (
