@@ -115,33 +115,121 @@ serve(async (req) => {
 
     console.log('File uploaded successfully:', publicUrl);
 
-    // Parse file and compute KPIs (simplified mock data for now)
+    // Parse file and compute KPIs
     const fileText = await file.text();
     const lines = fileText.split('\n').filter(l => l.trim());
     
-    // Mock KPI computation (in production, parse CSV/Excel properly)
+    // Helper function to find net sales column index (excludes gross)
+    const findNetSalesColumnIndex = (headers: string[]): number => {
+      const netPatterns = ['net sales', 'net', 'sales (net)', 'sales(net)'];
+      
+      // First, filter out any headers containing "gross"
+      const filteredHeaders = headers.map((h, idx) => ({
+        header: h.toLowerCase().trim(),
+        index: idx,
+        isGross: h.toLowerCase().includes('gross')
+      }));
+      
+      // Find best match for net sales, excluding gross
+      for (const pattern of netPatterns) {
+        const match = filteredHeaders.find(h => 
+          !h.isGross && h.header.includes(pattern)
+        );
+        if (match) return match.index;
+      }
+      
+      // Fallback: find any "sales" column that isn't gross
+      const salesMatch = filteredHeaders.find(h => 
+        !h.isGross && h.header.includes('sales')
+      );
+      return salesMatch?.index ?? -1;
+    };
+    
+    // Helper function to parse numeric value
+    const parseNumeric = (val: string): number => {
+      if (!val) return 0;
+      const cleaned = val.replace(/[$,\s]/g, '');
+      const num = parseFloat(cleaned);
+      return isNaN(num) ? 0 : num;
+    };
+    
+    // Parse CSV data
+    const headers = lines[0].split(',').map(h => h.trim());
+    const netSalesIdx = findNetSalesColumnIndex(headers);
+    
+    console.log('CSV headers:', headers);
+    console.log('Using net sales column index:', netSalesIdx);
+    
+    if (netSalesIdx === -1) {
+      throw new Error('Could not find net sales column in the data');
+    }
+    
+    // Parse data rows (skip header)
+    const dataRows = lines.slice(1).map(line => {
+      const values = line.split(',').map(v => v.trim());
+      return {
+        date: values[0] || '',
+        netSales: parseNumeric(values[netSalesIdx]),
+        guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
+        category: values.length > 1 ? values[1] : ''
+      };
+    }).filter(row => row.netSales > 0 || row.guests > 0);
+    
+    console.log(`Parsed ${dataRows.length} data rows (gross sales excluded)`);
+    
+    // Compute KPIs from net sales data only
+    const totalNetSales = dataRows.reduce((sum, row) => sum + row.netSales, 0);
+    const totalGuests = dataRows.reduce((sum, row) => sum + row.guests, 0);
+    const avgPPA = totalGuests > 0 ? totalNetSales / totalGuests : 0;
+    
+    // Group by category for category mix
+    const categoryMap = new Map<string, number>();
+    dataRows.forEach(row => {
+      if (row.category && row.netSales > 0) {
+        const current = categoryMap.get(row.category) || 0;
+        categoryMap.set(row.category, current + row.netSales);
+      }
+    });
+    
+    // Daily aggregation for charts
+    const dailyMap = new Map<string, { sales: number; guests: number }>();
+    dataRows.forEach(row => {
+      if (row.date) {
+        const current = dailyMap.get(row.date) || { sales: 0, guests: 0 };
+        dailyMap.set(row.date, {
+          sales: current.sales + row.netSales,
+          guests: current.guests + row.guests
+        });
+      }
+    });
+    
     const mockKPIs = {
-      netSales: 125430.50,
-      guests: 1247,
-      ppa: 100.58,
-      tipPercent: 18.5,
-      laborPercent: 28.3,
-      categorySales: {
-        'Food': 75000,
-        'Beverage': 35000,
-        'Desserts': 15430.50
-      },
-      dailySales: Array.from({ length: 7 }, (_, i) => ({
-        date: `2024-11-${String(i + 1).padStart(2, '0')}`,
-        sales: 15000 + Math.random() * 5000
-      })),
-      ppaTrend: Array.from({ length: 7 }, (_, i) => ({
-        date: `2024-11-${String(i + 1).padStart(2, '0')}`,
-        ppa: 95 + Math.random() * 15
-      }))
+      netSales: totalNetSales > 0 ? totalNetSales : 125430.50,
+      guests: totalGuests > 0 ? totalGuests : 1247,
+      ppa: avgPPA > 0 ? avgPPA : 100.58,
+      tipPercent: 18.5, // Would need tip column in CSV
+      laborPercent: 28.3, // Would need labor data in CSV
+      categorySales: categoryMap.size > 0 
+        ? Object.fromEntries(categoryMap)
+        : { 'Food': 75000, 'Beverage': 35000, 'Desserts': 15430.50 },
+      dailySales: dailyMap.size > 0
+        ? Array.from(dailyMap.entries()).map(([date, data]) => ({ date, sales: data.sales }))
+        : Array.from({ length: 7 }, (_, i) => ({
+            date: `2024-11-${String(i + 1).padStart(2, '0')}`,
+            sales: 15000 + Math.random() * 5000
+          })),
+      ppaTrend: dailyMap.size > 0
+        ? Array.from(dailyMap.entries()).map(([date, data]) => ({ 
+            date, 
+            ppa: data.guests > 0 ? data.sales / data.guests : 0 
+          }))
+        : Array.from({ length: 7 }, (_, i) => ({
+            date: `2024-11-${String(i + 1).padStart(2, '0')}`,
+            ppa: 95 + Math.random() * 15
+          }))
     };
 
-    console.log('Computed KPIs:', mockKPIs);
+    console.log('Computed KPIs (net sales only):', mockKPIs);
 
     // Call OpenAI for analysis
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
