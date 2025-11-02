@@ -105,6 +105,7 @@ const Auth = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              className="text-sm placeholder:text-muted-foreground/40"
             />
           </div>
 
@@ -119,6 +120,7 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
+                className="text-sm placeholder:text-muted-foreground/40"
               />
             </div>
           )}
