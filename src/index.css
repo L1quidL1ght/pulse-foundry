@@ -60,20 +60,5 @@
     background: rgba(18, 24, 24, 0.7);
     backdrop-filter: blur(24px);
     border: 1px solid rgba(16, 185, 129, 0.1);
-    box-shadow: 
-      0 0 20px rgba(16, 185, 129, 0.1),
-      inset 0 1px 0 rgba(16, 185, 129, 0.1);
-  }
-  
-  .glow {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
-  }
-  
-  .glow-subtle {
-    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
-  }
-  
-  .text-glow {
-    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
   }
 }

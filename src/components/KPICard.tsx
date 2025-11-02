@@ -22,7 +22,7 @@ export const KPICard = ({ title, value, icon: Icon, format = "number" }: KPICard
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-6 hover:glow-subtle transition-all duration-300 group">
+    <div className="glass-panel rounded-2xl p-6 hover:border-primary/30 transition-all duration-300 group">
       <div className="flex items-center justify-between mb-4">
         <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
           <Icon className="w-5 h-5 text-primary" />

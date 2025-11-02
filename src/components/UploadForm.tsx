@@ -158,7 +158,7 @@ export const UploadForm = () => {
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
                 <FormControl>
                   <div className="relative group">
-                    <div className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer glow-subtle">
+                    <div className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
                       <Input
                         type="file"
                         accept=".csv,.xlsx,.xls"
@@ -191,7 +191,7 @@ export const UploadForm = () => {
           <Button 
             type="submit" 
             disabled={isUploading} 
-            className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200 glow"
+            className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200"
           >
             {isUploading ? (
               <>

@@ -102,7 +102,7 @@ const PulseReport = () => {
             <ul className="space-y-4">
               {reportData.agent.insights.map((insight, idx) => (
                 <li key={idx} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0 glow" />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0" />
                   <p className="text-muted-foreground/80 text-sm leading-relaxed">{insight}</p>
                 </li>
               ))}
@@ -115,7 +115,7 @@ const PulseReport = () => {
             <ul className="space-y-4">
               {reportData.agent.actions.map((action, idx) => (
                 <li key={idx} className="flex items-start gap-3">
-                  <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-2 flex-shrink-0 glow" />
+                  <div className="w-1.5 h-1.5 bg-secondary rounded-full mt-2 flex-shrink-0" />
                   <p className="text-muted-foreground/80 text-sm leading-relaxed">{action}</p>
                 </li>
               ))}
