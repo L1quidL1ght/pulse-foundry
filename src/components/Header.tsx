@@ -18,14 +18,14 @@ export const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl bg-[#0b0f0f]/80 border-b border-primary/10">
       <div className="container max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-        {/* Mobile Menu Trigger */}
+        {/* Menu Trigger - All Screen Sizes */}
         {user && (
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="md:hidden -ml-2"
+                className="-ml-2"
                 aria-label="Menu"
               >
                 <Menu className="h-5 w-5" />
@@ -57,18 +57,6 @@ export const Header = () => {
                     </Button>
                   </Link>
                 )}
-                
-                <Button 
-                  variant="ghost" 
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleSignOut();
-                  }}
-                  className="w-full justify-start uppercase text-xs tracking-wider text-muted-foreground hover:text-primary"
-                >
-                  <LogOut className="h-3 w-3 mr-2" />
-                  Sign Out
-                </Button>
               </nav>
             </SheetContent>
           </Sheet>
@@ -85,70 +73,31 @@ export const Header = () => {
           <span className="text-2xl font-bold text-primary tracking-tight">Pulse</span>
         </Link>
         
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
+        {/* Right Side - Sign Out / Auth */}
+        <div className="flex items-center gap-4">
           {user ? (
-            <>
-              <Link to="/dashboard">
-                <Button 
-                  variant="ghost" 
-                  className={`uppercase text-xs tracking-wider ${
-                    location.pathname.startsWith("/dashboard") ? "text-primary" : "text-muted-foreground hover:text-primary"
-                  }`}
-                >
-                  Dashboard
-                </Button>
-              </Link>
-              
-              {isAdmin && (
-                <Link to="/admin/pulse">
-                  <Button 
-                    variant="ghost" 
-                    className={`uppercase text-xs tracking-wider ${
-                      location.pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground hover:text-primary"
-                    }`}
-                  >
-                    <Shield className="h-3 w-3 mr-1" />
-                    Admin
-                  </Button>
-                </Link>
-              )}
-              
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-primary"
+              aria-label="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          ) : (
+            <Link to="/auth">
               <Button 
                 variant="ghost" 
-                size="icon"
-                onClick={handleSignOut}
-                className="text-muted-foreground hover:text-primary"
-                aria-label="Sign out"
+                className={`uppercase text-xs tracking-wider ${
+                  location.pathname === "/auth" ? "text-primary" : "text-muted-foreground hover:text-primary"
+                }`}
               >
-                <LogOut className="h-4 w-4" />
+                Sign In
               </Button>
-            </>
-          ) : (
-            <>
-              <Link to="/upload">
-                <Button 
-                  variant="ghost" 
-                  className={`uppercase text-xs tracking-wider ${
-                    location.pathname === "/upload" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                  }`}
-                >
-                  Upload
-                </Button>
-              </Link>
-              <Link to="/auth">
-                <Button 
-                  variant="ghost" 
-                  className={`uppercase text-xs tracking-wider ${
-                    location.pathname === "/auth" ? "text-primary" : "text-muted-foreground hover:text-primary"
-                  }`}
-                >
-                  Sign In
-                </Button>
-              </Link>
-            </>
+            </Link>
           )}
-        </nav>
+        </div>
       </div>
     </header>
   );
