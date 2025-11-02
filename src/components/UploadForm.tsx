@@ -1,12 +1,3 @@
-// ✅ only ONE config definition allowed
-export const config = {
-  auth: false,
-};
-
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,53 +34,33 @@ export const UploadForm = () => {
   const onSubmit = async (data: UploadFormData) => {
     setIsUploading(true);
     setUploadProgress(10);
-
     try {
       const file = data.file[0];
       setUploadProgress(30);
 
-      // Prepare the FormData correctly for upload
       const formData = new FormData();
       formData.append("restaurant_name", data.restaurantName);
       formData.append("report_type", data.reportType);
       formData.append("period", data.period);
-      formData.append("file", file);
+      formData.append("file", file); // binary
 
-      // Use fetch instead of supabase.functions.invoke()
       const res = await fetch("https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload", {
         method: "POST",
-        headers: {
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
+        // DO NOT send Authorization or apikey when auth:false
+        headers: { "x-client-info": "lovable-uploader" },
         body: formData,
       });
 
-      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+      if (!res.ok) throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
       const uploadData = await res.json();
 
-      setUploadProgress(80);
-
-      if (uploadError) throw uploadError;
-
       setUploadProgress(100);
-
-      toast({
-        title: "Analysis complete",
-        description: "Data processed",
-      });
-
+      toast({ title: "Analysis complete", description: "Data processed" });
       localStorage.setItem("latestReport", JSON.stringify(uploadData));
-
-      setTimeout(() => {
-        navigate("/report");
-      }, 500);
+      navigate("/report");
     } catch (error) {
       console.error("Upload error:", error);
-      toast({
-        title: "Error",
-        description: "Upload failed",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Upload failed", variant: "destructive" });
       setUploadProgress(0);
     } finally {
       setIsUploading(false);
@@ -167,25 +138,23 @@ export const UploadForm = () => {
           <FormField
             control={form.control}
             name="file"
-            render={({ field: { onChange, value, ...field } }) => (
+            render={({ field: { onChange, ...rest } }) => (
               <FormItem>
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
                 <FormControl>
-                  <div className="relative group">
-                    <div className="glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
-                      <Input
-                        type="file"
-                        accept=".csv,.xlsx,.xls"
-                        onChange={(e) => onChange(e.target.files)}
-                        {...field}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <Upload className="w-8 h-8 text-primary" />
-                        <p className="text-sm text-muted-foreground">CSV, XLSX</p>
-                      </div>
+                  <label className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={(e) => onChange(e.target.files)}
+                      {...rest}
+                      className="sr-only"
+                    />
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Upload className="w-8 h-8 text-primary" />
+                      <p className="text-sm text-muted-foreground">{form.watch("file")?.[0]?.name ?? "CSV, XLSX"}</p>
                     </div>
-                  </div>
+                  </label>
                 </FormControl>
                 <FormMessage />
               </FormItem>
