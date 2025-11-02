@@ -1,125 +1,79 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Pulse Design System - Fintech Dashboard Aesthetic */
+/* Pulse - Futuristic Analytics Dashboard */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 180 10% 6%;
+    --foreground: 0 0% 100%;
     
-    --card: 0 0% 98%;
-    --card-foreground: 222 47% 11%;
+    --card: 180 10% 8%;
+    --card-foreground: 0 0% 100%;
     
-    --popover: 0 0% 98%;
-    --popover-foreground: 222 47% 11%;
+    --popover: 180 10% 8%;
+    --popover-foreground: 0 0% 100%;
     
     --primary: 160 84% 39%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
     
-    --secondary: 220 17% 85%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 160 95% 62%;
+    --secondary-foreground: 0 0% 0%;
     
-    --muted: 220 17% 85%;
-    --muted-foreground: 215 20% 45%;
+    --muted: 180 10% 12%;
+    --muted-foreground: 0 0% 80%;
     
     --accent: 160 84% 39%;
-    --accent-foreground: 0 0% 100%;
+    --accent-foreground: 0 0% 0%;
     
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 217 33% 85%;
-    --input: 217 33% 85%;
+    --border: 160 84% 39%;
+    --input: 180 10% 12%;
     --ring: 160 84% 39%;
     
     --radius: 1rem;
     
     --chart-1: 160 84% 39%;
-    --chart-2: 173 80% 40%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
-    
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 40% 98%;
-    
-    --primary: 160 84% 39%;
-    --primary-foreground: 222 47% 11%;
-    
-    --secondary: 217 33% 17%;
-    --secondary-foreground: 210 40% 98%;
-    
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
-    
-    --accent: 160 84% 39%;
-    --accent-foreground: 222 47% 11%;
-    
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 160 84% 39%;
-    
-    --chart-1: 160 84% 39%;
-    --chart-2: 173 80% 40%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --chart-2: 160 95% 62%;
+    --chart-3: 173 80% 40%;
+    --chart-4: 197 37% 40%;
+    --chart-5: 180 50% 50%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border/10;
   }
+  
   body {
-    @apply bg-background text-foreground font-['Inter'];
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-[#0b0f0f] text-foreground font-sans antialiased;
+    background-image: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
   }
 }
 
 @layer utilities {
   .glass-panel {
-    @apply bg-card/40 backdrop-blur-xl border border-border/50 shadow-2xl;
+    background: rgba(18, 24, 24, 0.7);
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(16, 185, 129, 0.1);
+    box-shadow: 
+      0 0 20px rgba(16, 185, 129, 0.1),
+      inset 0 1px 0 rgba(16, 185, 129, 0.1);
   }
   
-  .glass-card {
-    @apply bg-card/60 backdrop-blur-md border border-border/40 rounded-2xl shadow-lg;
+  .glow {
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
   }
   
-  .emerald-glow {
-    box-shadow: 0 0 20px rgba(16, 185, 129, 0.15);
+  .glow-subtle {
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+  }
+  
+  .text-glow {
+    text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
   }
 }

@@ -1,15 +1,13 @@
-import { Card } from "@/components/ui/card";
 import { LucideIcon } from "lucide-react";
 
 interface KPICardProps {
   title: string;
   value: string | number;
   icon: LucideIcon;
-  trend?: string;
   format?: "currency" | "number" | "percentage";
 }
 
-export const KPICard = ({ title, value, icon: Icon, trend, format = "number" }: KPICardProps) => {
+export const KPICard = ({ title, value, icon: Icon, format = "number" }: KPICardProps) => {
   const formatValue = (val: string | number) => {
     if (typeof val === "string") return val;
     
@@ -24,19 +22,16 @@ export const KPICard = ({ title, value, icon: Icon, trend, format = "number" }: 
   };
 
   return (
-    <Card className="glass-card p-6 hover:emerald-glow transition-all duration-300">
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-3xl font-bold text-foreground">{formatValue(value)}</p>
-          {trend && (
-            <p className="text-xs text-muted-foreground">{trend}</p>
-          )}
-        </div>
-        <div className="p-3 bg-primary/10 rounded-xl">
-          <Icon className="w-6 h-6 text-primary" />
+    <div className="glass-panel rounded-2xl p-6 hover:glow-subtle transition-all duration-300 group">
+      <div className="flex items-center justify-between mb-4">
+        <div className="p-3 bg-primary/10 rounded-xl group-hover:bg-primary/20 transition-colors">
+          <Icon className="w-5 h-5 text-primary" />
         </div>
       </div>
-    </Card>
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-wider text-muted-foreground/60">{title}</p>
+        <p className="text-3xl font-semibold text-foreground">{formatValue(value)}</p>
+      </div>
+    </div>
   );
 };
