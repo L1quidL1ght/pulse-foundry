@@ -57,7 +57,7 @@ const Auth = () => {
         }
       } else if (isResetPassword) {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: 'https://pulse.thefoundrymodel.com/auth',
         });
 
         if (error) {
