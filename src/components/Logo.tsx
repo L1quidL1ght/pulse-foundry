@@ -11,7 +11,7 @@ export const Logo = () => {
       </div>
       <div className="flex flex-col items-center">
         <h1 className="text-4xl font-bold text-primary tracking-tight">PULSE</h1>
-        <p className="text-xs text-muted-foreground tracking-[0.3em] mt-1">BY THE FOUNDRY</p>
+        <p className="text-xs text-muted-foreground tracking-wider mt-1">Powered by The Foundry Model</p>
       </div>
     </div>
   );
