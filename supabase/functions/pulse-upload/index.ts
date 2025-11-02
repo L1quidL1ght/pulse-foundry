@@ -156,14 +156,32 @@ serve(async (req) => {
       return isNaN(num) ? 0 : num;
     };
     
+    // Helper to detect if a row is likely a header row
+    const isHeaderRow = (row: any[]): boolean => {
+      const rowStr = row.map(c => String(c || '').toLowerCase()).join(' ');
+      return rowStr.includes('sales') || rowStr.includes('guest') || 
+             rowStr.includes('date') || rowStr.includes('day') ||
+             rowStr.includes('category') || rowStr.includes('item');
+    };
+    
     // Parse based on file type
     if (fileName.endsWith('.csv')) {
       // Parse CSV
       const fileText = new TextDecoder().decode(parsedBuffer);
       const lines = fileText.split('\n').filter(l => l.trim());
-      headers = lines[0].split(',').map(h => h.trim());
       
-      dataRows = lines.slice(1).map(line => {
+      // Find header row
+      let headerLineIdx = 0;
+      for (let i = 0; i < Math.min(10, lines.length); i++) {
+        const values = lines[i].split(',').map(h => h.trim());
+        if (isHeaderRow(values)) {
+          headerLineIdx = i;
+          break;
+        }
+      }
+      
+      headers = lines[headerLineIdx].split(',').map(h => h.trim());
+      dataRows = lines.slice(headerLineIdx + 1).map(line => {
         const values = line.split(',').map(v => v.trim());
         return values;
       });
@@ -177,8 +195,20 @@ serve(async (req) => {
         throw new Error('Excel file is empty');
       }
       
-      headers = (jsonData[0] as any[]).map(h => String(h || ''));
-      dataRows = jsonData.slice(1) as any[][];
+      // Find header row (skip metadata rows like restaurant name)
+      let headerRowIdx = 0;
+      for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+        const row = jsonData[i] as any[];
+        if (row && row.length > 1 && isHeaderRow(row)) {
+          headerRowIdx = i;
+          break;
+        }
+      }
+      
+      headers = (jsonData[headerRowIdx] as any[]).map(h => String(h || ''));
+      dataRows = jsonData.slice(headerRowIdx + 1).filter(row => 
+        Array.isArray(row) && row.length > 0
+      ) as any[][];
     }
     
     const netSalesIdx = findNetSalesColumnIndex(headers);
