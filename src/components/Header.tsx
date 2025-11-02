@@ -25,7 +25,7 @@ export const Header = () => {
               <Button 
                 variant="ghost" 
                 size="icon"
-                className="md:hidden"
+                className="md:hidden -ml-2"
                 aria-label="Menu"
               >
                 <Menu className="h-5 w-5" />

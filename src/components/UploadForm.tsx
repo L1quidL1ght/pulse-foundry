@@ -107,9 +107,9 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
   };
 
   return (
-    <div className="glass-panel rounded-2xl p-8 max-w-2xl mx-auto">
+    <div className="glass-panel rounded-2xl p-6 max-w-2xl mx-auto">
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="restaurantName"
@@ -117,7 +117,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
               <FormItem>
                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Restaurant</FormLabel>
                 <FormControl>
-                  <Input placeholder="Name" {...field} className="bg-muted/50 border-primary/20 focus:border-primary" />
+                  <Input placeholder="Name" {...field} className="bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -133,7 +133,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger className="bg-muted/50 border-primary/20 focus:border-primary">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder="Select" className="placeholder:text-muted-foreground/40" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent className="bg-card border-primary/20">
@@ -157,7 +157,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
                   <Input
                     placeholder="Q1 2024"
                     {...field}
-                    className="bg-muted/50 border-primary/20 focus:border-primary"
+                    className="bg-muted/50 border-primary/20 focus:border-primary placeholder:text-muted-foreground/40"
                   />
                 </FormControl>
                 <FormMessage />
@@ -178,7 +178,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
               return (
                 <FormItem>
                   <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
-                  <div className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all">
+                  <div className="block glass-panel rounded-xl p-6 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all">
                     <label className="cursor-pointer">
                       <input
                         type="file"
@@ -190,8 +190,8 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
                         className="sr-only"
                       />
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <Upload className="w-8 h-8 text-primary" />
-                        <p className="text-sm text-muted-foreground">{fileName ? `Ready: ${fileName}` : "CSV, XLSX"}</p>
+                        <Upload className="w-6 h-6 text-primary" />
+                        <p className="text-sm text-muted-foreground/60">{fileName ? `Ready: ${fileName}` : "CSV, XLSX"}</p>
                       </div>
                     </label>
                   </div>
@@ -213,7 +213,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
           <Button
             type="submit"
             disabled={isUploading}
-            className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+            className="w-full rounded-xl px-6 py-2.5 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
           >
             {isUploading ? (
               <>

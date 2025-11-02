@@ -66,6 +66,7 @@ const Dashboard = () => {
       <Header />
       
       <main className="container max-w-7xl mx-auto px-6 pt-32 pb-12">
+        <h1 className="text-xl font-semibold text-muted-foreground mb-6">Dashboard</h1>
         <div className="mb-12">
           <UploadForm onUploadSuccess={fetchReports} />
         </div>
