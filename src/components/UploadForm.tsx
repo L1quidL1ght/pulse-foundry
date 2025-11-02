@@ -129,7 +129,7 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
             name="reportType"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Type</FormLabel>
+                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Report Type</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger className="bg-muted/50 border-primary/20 focus:border-primary">
