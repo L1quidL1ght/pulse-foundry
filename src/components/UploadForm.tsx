@@ -138,29 +138,39 @@ export const UploadForm = () => {
           <FormField
             control={form.control}
             name="file"
-            render={({ field: { onChange, ...rest } }) => (
-              <FormItem>
-                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
-                <FormControl>
-                  <label className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
-                    <input
-                      type="file"
-                      accept=".csv,.xlsx,.xls"
-                      onChange={(e) => onChange(e.target.files)}
-                      {...rest}
-                      className="sr-only"
-                    />
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Upload className="w-8 h-8 text-primary" />
-                      <p className="text-sm text-muted-foreground">{form.watch("file")?.[0]?.name ?? "CSV, XLSX"}</p>
-                    </div>
-                  </label>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+            render={({ field }) => {
+              const { ref, name, onBlur } = field; // DO NOT use field.value
+              const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files); // pass FileList
 
+              const chosen = form.watch("file");
+              const fileName = chosen && chosen.length > 0 ? (chosen[0] as File).name : null;
+
+              return (
+                <FormItem>
+                  <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
+                  <FormControl>
+                    <label className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
+                      {/* Hidden input. No value prop. */}
+                      <input
+                        type="file"
+                        accept=".csv,.xlsx,.xls"
+                        name={name}
+                        ref={ref}
+                        onBlur={onBlur}
+                        onChange={onFileChange}
+                        className="sr-only"
+                      />
+                      <div className="flex flex-col items-center justify-center gap-2">
+                        <Upload className="w-8 h-8 text-primary" />
+                        <p className="text-sm text-muted-foreground">{fileName ? `Ready: ${fileName}` : "CSV, XLSX"}</p>
+                      </div>
+                    </label>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
           {isUploading && (
             <div className="space-y-3">
               <Progress value={uploadProgress} className="h-1 bg-muted" />
