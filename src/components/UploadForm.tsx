@@ -191,7 +191,7 @@ export const UploadForm = () => {
           <Button 
             type="submit" 
             disabled={isUploading} 
-            className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200"
+            className="w-full rounded-xl px-6 py-3 bg-primary hover:bg-primary/90 text-black font-semibold transition-all duration-200 shadow-[0_0_20px_rgba(16,185,129,0.3)]"
           >
             {isUploading ? (
               <>
@@ -199,7 +199,7 @@ export const UploadForm = () => {
                 Analyzing
               </>
             ) : (
-              "Analyze Data"
+              "Analyze"
             )}
           </Button>
         </form>
