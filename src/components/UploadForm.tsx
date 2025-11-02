@@ -39,17 +39,27 @@ export const UploadForm = () => {
       const file = data.file[0];
       setUploadProgress(30);
 
+      // Prepare the FormData correctly for upload
       const formData = new FormData();
       formData.append("restaurant_name", data.restaurantName);
       formData.append("report_type", data.reportType);
       formData.append("period", data.period);
       formData.append("file", file);
 
-      const { data: uploadData, error: uploadError } = await supabase.functions.invoke("pulse-upload", {
+      // Use fetch instead of supabase.functions.invoke()
+      const res = await fetch("https://vbijtwzriiqykkjvxjkw.supabase.co/functions/v1/pulse-upload", {
+        method: "POST",
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
         body: formData,
       });
 
+      if (!res.ok) throw new Error(`Upload failed: ${res.statusText}`);
+      const uploadData = await res.json();
+
       setUploadProgress(80);
+
       if (uploadError) throw uploadError;
 
       setUploadProgress(100);
@@ -60,7 +70,10 @@ export const UploadForm = () => {
       });
 
       localStorage.setItem("latestReport", JSON.stringify(uploadData));
-      setTimeout(() => navigate("/report"), 500);
+
+      setTimeout(() => {
+        navigate("/report");
+      }, 500);
     } catch (error) {
       console.error("Upload error:", error);
       toast({
@@ -72,6 +85,15 @@ export const UploadForm = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
   };
 
   return (
