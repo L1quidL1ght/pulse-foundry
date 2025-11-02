@@ -139,8 +139,8 @@ export const UploadForm = () => {
             control={form.control}
             name="file"
             render={({ field }) => {
-              const { ref, name, onBlur } = field; // DO NOT use field.value
-              const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files); // pass FileList
+              const { ref, name, onBlur, value, ...fieldProps } = field;
+              const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files);
 
               const chosen = form.watch("file");
               const fileName = chosen && chosen.length > 0 ? (chosen[0] as File).name : null;
@@ -148,9 +148,8 @@ export const UploadForm = () => {
               return (
                 <FormItem>
                   <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
-                  <FormControl>
-                    <label className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all cursor-pointer">
-                      {/* Hidden input. No value prop. */}
+                  <div className="block glass-panel rounded-xl p-8 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all">
+                    <label className="cursor-pointer">
                       <input
                         type="file"
                         accept=".csv,.xlsx,.xls"
@@ -165,7 +164,7 @@ export const UploadForm = () => {
                         <p className="text-sm text-muted-foreground">{fileName ? `Ready: ${fileName}` : "CSV, XLSX"}</p>
                       </div>
                     </label>
-                  </FormControl>
+                  </div>
                   <FormMessage />
                 </FormItem>
               );
