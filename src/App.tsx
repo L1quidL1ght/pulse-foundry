@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
+import Reports from "./pages/Reports";
 import ReportDetail from "./pages/ReportDetail";
 import AdminDashboard from "./pages/AdminDashboard";
 import PulseUpload from "./pages/PulseUpload";
@@ -25,6 +26,8 @@ const App = () => (
             <Route path="/" element={<Auth />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/report/:id" element={<ReportDetail />} />
             <Route path="/dashboard/:id" element={<ReportDetail />} />
             <Route path="/admin/pulse" element={<AdminDashboard />} />
             <Route path="/admin/pulse/:id" element={<ReportDetail />} />

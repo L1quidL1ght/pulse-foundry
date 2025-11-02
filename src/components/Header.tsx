@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { LogOut, Shield, Menu, Activity } from "lucide-react";
+import { LogOut, Shield, Menu, Activity, FileText } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 
@@ -41,6 +41,18 @@ export const Header = () => {
                     }`}
                   >
                     Dashboard
+                  </Button>
+                </Link>
+
+                <Link to="/reports" onClick={() => setMobileMenuOpen(false)}>
+                  <Button 
+                    variant="ghost" 
+                    className={`w-full justify-start uppercase text-xs tracking-wider ${
+                      location.pathname.startsWith("/reports") ? "text-primary" : "text-muted-foreground hover:text-primary"
+                    }`}
+                  >
+                    <FileText className="h-3 w-3 mr-2" />
+                    Reports
                   </Button>
                 </Link>
                 
