@@ -906,6 +906,8 @@ serve(async (req) => {
     const sourceFiles = datasetSummariesForStorage.map((summary) => ({
       fileName: summary.fileName,
       publicUrl: summary.publicUrl,
+      storageFileName: summary.storageFileName,
+      contentType: summary.contentType,
       datasetType: summary.datasetType,
       rowCount: summary.rowCount,
     }));

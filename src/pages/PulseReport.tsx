@@ -4,7 +4,20 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { KPICard } from "@/components/KPICard";
 import { DollarSign, Users, TrendingUp, Percent, Clock } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface ReportData {
   kpis: {
@@ -23,12 +36,28 @@ interface ReportData {
   chartData: {
     dailySales?: Array<{ date: string; sales: number }>;
     ppaTrend?: Array<{ date: string; ppa: number }>;
+    categoryMix?: Array<{ category: string; sales: number }>;
     availableCharts?: Record<string, boolean>;
+    sourceFiles?: Array<{
+      fileName: string;
+      publicUrl?: string;
+      datasetType?: string;
+      rowCount?: number;
+    }>;
   };
 }
 
 const PulseReport = () => {
   const [reportData, setReportData] = useState<ReportData | null>(null);
+
+  const categoryColors = [
+    "#22d3ee",
+    "#34d399",
+    "#fbbf24",
+    "#f472b6",
+    "#a855f7",
+    "#fb7185",
+  ];
 
   useEffect(() => {
     const stored = localStorage.getItem("latestReport");
@@ -248,6 +277,86 @@ const PulseReport = () => {
             )}
           </div>
         </div>
+
+        {reportData.chartData.availableCharts?.categoryMix && reportData.chartData.categoryMix?.length ? (
+          <div className="glass-panel rounded-2xl p-8 mt-8">
+            <h3 className="text-sm uppercase tracking-wider text-muted-foreground/60 mb-6">Category Mix</h3>
+            <div className="grid lg:grid-cols-2 gap-6">
+              <ResponsiveContainer width="100%" height={280}>
+                <PieChart>
+                  <Pie
+                    data={reportData.chartData.categoryMix}
+                    dataKey="sales"
+                    nameKey="category"
+                    innerRadius={60}
+                    outerRadius={110}
+                  >
+                    {reportData.chartData.categoryMix.map((entry, index) => (
+                      <Cell
+                        key={entry.category}
+                        fill={categoryColors[index % categoryColors.length]}
+                        stroke="rgba(18, 24, 24, 0.75)"
+                      />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    formatter={(value: number) => `$${value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+                    contentStyle={{
+                      background: "rgba(18, 24, 24, 0.95)",
+                      border: "1px solid rgba(16, 185, 129, 0.2)",
+                      borderRadius: "0.75rem",
+                      boxShadow: "0 0 20px rgba(16, 185, 129, 0.2)",
+                    }}
+                    labelStyle={{ color: "rgba(255, 255, 255, 0.9)" }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+
+              <div className="space-y-3">
+                {reportData.chartData.categoryMix.map((entry, index) => (
+                  <div key={entry.category} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: categoryColors[index % categoryColors.length] }}
+                      />
+                      <span className="text-muted-foreground/80">{entry.category}</span>
+                    </div>
+                    <span className="font-medium text-foreground">${entry.sales.toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {reportData.chartData.sourceFiles?.length ? (
+          <div className="glass-panel rounded-2xl p-8 mt-8">
+            <h3 className="text-sm uppercase tracking-wider text-muted-foreground/60 mb-6">Source Files</h3>
+            <ul className="space-y-4 text-sm">
+              {reportData.chartData.sourceFiles.map((file, index) => (
+                <li key={`${file.fileName}-${index}`} className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="font-medium text-foreground">{file.fileName}</p>
+                    <p className="text-muted-foreground text-xs">
+                      {(file.datasetType || "Unknown").replace(/_/g, " ")} • {file.rowCount ?? 0} rows
+                    </p>
+                  </div>
+                  {file.publicUrl ? (
+                    <a
+                      href={file.publicUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-primary hover:underline"
+                    >
+                      Download
+                    </a>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </main>
     </div>
   );
