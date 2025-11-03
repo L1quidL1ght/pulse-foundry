@@ -3,11 +3,20 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/Header";
 import { KPICard } from "@/components/KPICard";
+import { DynamicChart } from "@/components/DynamicChart";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Users, TrendingUp, Percent, Clock, Download, ArrowLeft, Loader2, FileText } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Download, ArrowLeft, Loader2, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import {
+  extractNumericKPIs,
+  mapKPIToIcon,
+  mapKPIToFormat,
+  humanizeFieldName,
+  extractChartableData,
+  determineDataKey,
+  determineNameKey,
+} from "@/utils/reportRenderer";
 
 interface ReportData {
   id: string;
@@ -143,30 +152,15 @@ const ReportDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <KPICard
-            title="Net Sales"
-            value={report.kpis.netSales}
-            icon={DollarSign}
-            format="currency"
-          />
-          <KPICard
-            title="Guest Count"
-            value={report.kpis.guests}
-            icon={Users}
-            format="number"
-          />
-          <KPICard
-            title="Per Person Average"
-            value={report.kpis.ppa}
-            icon={TrendingUp}
-            format="currency"
-          />
-          <KPICard
-            title="Tip Percentage"
-            value={report.kpis.tipPercent}
-            icon={Percent}
-            format="percentage"
-          />
+          {extractNumericKPIs(report.kpis).map(({ key, value }) => (
+            <KPICard
+              key={key}
+              title={humanizeFieldName(key)}
+              value={value}
+              icon={mapKPIToIcon(key)}
+              format={mapKPIToFormat(key)}
+            />
+          ))}
         </div>
 
         <div className="glass-panel rounded-2xl p-8 mb-8">
@@ -234,45 +228,20 @@ const ReportDetail = () => {
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="glass-panel rounded-2xl p-6">
-            <h3 className="text-xl font-bold mb-6">Daily Sales Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={report.chart_data.dailySales}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+        {extractChartableData(report.chart_data).length > 0 && (
+          <div className="grid md:grid-cols-2 gap-8">
+            {extractChartableData(report.chart_data).map(({ key, data, type }) => (
+              <DynamicChart
+                key={key}
+                title={humanizeFieldName(key)}
+                data={data}
+                chartType={type}
+                dataKey={determineDataKey(key)}
+                nameKey={determineNameKey(key)}
+              />
+            ))}
           </div>
-
-          <div className="glass-panel rounded-2xl p-6">
-            <h3 className="text-xl font-bold mb-6">PPA Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={report.chart_data.ppaTrend}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Line type="monotone" dataKey="ppa" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+        )}
       </main>
     </div>
   );
