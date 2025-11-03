@@ -143,30 +143,72 @@ const ReportDetail = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          <KPICard
-            title="Net Sales"
-            value={report.kpis.netSales}
-            icon={DollarSign}
-            format="currency"
-          />
-          <KPICard
-            title="Guest Count"
-            value={report.kpis.guests}
-            icon={Users}
-            format="number"
-          />
-          <KPICard
-            title="Per Person Average"
-            value={report.kpis.ppa}
-            icon={TrendingUp}
-            format="currency"
-          />
-          <KPICard
-            title="Tip Percentage"
-            value={report.kpis.tipPercent}
-            icon={Percent}
-            format="percentage"
-          />
+          {(() => {
+            const availability = report.kpis?.available ?? {};
+            const cards = [
+              {
+                key: "netSales",
+                title: "Net Sales",
+                icon: DollarSign,
+                format: "currency" as const,
+                available: availability.netSales ?? true,
+              },
+              {
+                key: "guests",
+                title: "Guest Count",
+                icon: Users,
+                format: "number" as const,
+                available: availability.guests ?? true,
+              },
+              {
+                key: "ppa",
+                title: "Per Person Average",
+                icon: TrendingUp,
+                format: "currency" as const,
+                available: availability.ppa ?? true,
+              },
+              {
+                key: "tipPercent",
+                title: "Tip Percentage",
+                icon: Percent,
+                format: "percentage" as const,
+                available: availability.tipPercent ?? true,
+              },
+              {
+                key: "laborPercent",
+                title: "Labor Percentage",
+                icon: Clock,
+                format: "percentage" as const,
+                available: availability.laborPercent ?? false,
+              },
+            ];
+
+            const filtered = cards.filter(({ key, available }) => {
+              const value = (report.kpis as Record<string, string | number | undefined>)[key];
+              if (!available) return false;
+              if (value === undefined || value === null) return false;
+              if (typeof value === "string" && value.toUpperCase() === "N/A") return false;
+              return true;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="glass-panel rounded-2xl p-6 md:col-span-2 lg:col-span-4 flex items-center justify-center text-muted-foreground">
+                  No KPI data available for this upload.
+                </div>
+              );
+            }
+
+            return filtered.map(({ key, title, icon, format }) => (
+              <KPICard
+                key={key}
+                title={title}
+                value={(report.kpis as Record<string, string | number>)[key]}
+                icon={icon}
+                format={format}
+              />
+            ));
+          })()}
         </div>
 
         <div className="glass-panel rounded-2xl p-8 mb-8">
@@ -201,43 +243,61 @@ const ReportDetail = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8">
-          <div className="glass-panel rounded-2xl p-6">
-            <h3 className="text-xl font-bold mb-6">Daily Sales Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={report.chart_data.dailySales}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {(() => {
+            const availableCharts = report.chart_data?.availableCharts ?? {};
+            const dailySalesAvailable = availableCharts.dailySales && report.chart_data.dailySales?.length;
+            const ppaTrendAvailable = availableCharts.ppaTrend && report.chart_data.ppaTrend?.length;
 
-          <div className="glass-panel rounded-2xl p-6">
-            <h3 className="text-xl font-bold mb-6">PPA Trend</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={report.chart_data.ppaTrend}>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Line type="monotone" dataKey="ppa" stroke="hsl(var(--primary))" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            return (
+              <>
+                <div className="glass-panel rounded-2xl p-6">
+                  <h3 className="text-xl font-bold mb-6">Daily Sales Trend</h3>
+                  {dailySalesAvailable ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart data={report.chart_data.dailySales}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-muted-foreground">No daily sales data available.</p>
+                  )}
+                </div>
+
+                <div className="glass-panel rounded-2xl p-6">
+                  <h3 className="text-xl font-bold mb-6">PPA Trend</h3>
+                  {ppaTrendAvailable ? (
+                    <ResponsiveContainer width="100%" height={300}>
+                      <LineChart data={report.chart_data.ppaTrend}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
+                        <YAxis stroke="hsl(var(--muted-foreground))" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--background))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: "8px",
+                          }}
+                        />
+                        <Line type="monotone" dataKey="ppa" stroke="hsl(var(--primary))" strokeWidth={2} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <p className="text-muted-foreground">No PPA data available.</p>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       </main>
     </div>

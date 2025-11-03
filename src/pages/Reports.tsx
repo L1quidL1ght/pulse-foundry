@@ -61,13 +61,15 @@ const Reports = () => {
     }
   };
 
-  const formatCurrency = (value?: number) => {
+  const formatCurrency = (value?: number | string) => {
     if (value === undefined || value === null) return "—";
+    if (typeof value === "string") return value;
     return `$${value.toLocaleString()}`;
   };
 
-  const formatPercentage = (value?: number) => {
+  const formatPercentage = (value?: number | string) => {
     if (value === undefined || value === null) return "—";
+    if (typeof value === "string") return value;
     return `${value.toFixed(1)}%`;
   };
 
@@ -150,21 +152,25 @@ const Reports = () => {
                       <DollarSign className="h-3 w-3 text-muted-foreground/60" />
                       <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Sales</p>
                     </div>
-                    <p className="text-sm font-semibold">{formatCurrency(report.kpis?.net_sales)}</p>
+                    <p className="text-sm font-semibold">
+                      {formatCurrency((report.kpis as any)?.netSales ?? (report.kpis as any)?.net_sales)}
+                    </p>
                   </div>
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       <TrendingUp className="h-3 w-3 text-muted-foreground/60" />
                       <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">PPA</p>
                     </div>
-                    <p className="text-sm font-semibold">{formatCurrency(report.kpis?.ppa)}</p>
+                    <p className="text-sm font-semibold">{formatCurrency((report.kpis as any)?.ppa)}</p>
                   </div>
                   <div>
                     <div className="flex items-center gap-1 mb-1">
                       <Percent className="h-3 w-3 text-muted-foreground/60" />
                       <p className="text-xs text-muted-foreground/60 uppercase tracking-wider">Tips</p>
                     </div>
-                    <p className="text-sm font-semibold">{formatPercentage(report.kpis?.tip_pct)}</p>
+                    <p className="text-sm font-semibold">
+                      {formatPercentage((report.kpis as any)?.tipPercent ?? (report.kpis as any)?.tip_pct)}
+                    </p>
                   </div>
                 </div>
 
