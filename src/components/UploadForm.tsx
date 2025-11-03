@@ -15,9 +15,8 @@ import { useAuth } from "@/contexts/AuthContext";
 
 const uploadSchema = z.object({
   restaurantName: z.string().min(1, "Required"),
-  reportType: z.string().min(1, "Required"),
   period: z.string().min(1, "Required"),
-  file: z.instanceof(FileList).refine((files) => files?.length > 0, "Required"),
+  files: z.instanceof(FileList).refine((files) => files?.length > 0, "At least one file required"),
 });
 
 type UploadFormData = z.infer<typeof uploadSchema>;
@@ -41,14 +40,17 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
     setIsUploading(true);
     setUploadProgress(10);
     try {
-      const file = data.file[0];
+      const files = Array.from(data.files);
       setUploadProgress(30);
 
       const formData = new FormData();
       formData.append("restaurant_name", data.restaurantName);
-      formData.append("report_type", data.reportType);
       formData.append("period", data.period);
-      formData.append("file", file);
+      
+      // Append all files
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
       
       // Add user_id if authenticated
       if (user?.id) {
@@ -124,28 +126,6 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="reportType"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Report Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className="bg-muted/50 border-primary/20 focus:border-primary">
-                      <SelectValue placeholder="Select" className="placeholder:text-muted-foreground/40" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className="bg-card border-primary/20">
-                    <SelectItem value="sales">Sales</SelectItem>
-                    <SelectItem value="labor">Labor</SelectItem>
-                    <SelectItem value="performance">Performance</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <FormField
             control={form.control}
@@ -167,17 +147,20 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
 
           <FormField
             control={form.control}
-            name="file"
+            name="files"
             render={({ field }) => {
               const { ref, name, onBlur, value, ...fieldProps } = field;
               const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => field.onChange(e.target.files);
 
-              const chosen = form.watch("file");
-              const fileName = chosen && chosen.length > 0 ? (chosen[0] as File).name : null;
+              const chosen = form.watch("files");
+              const fileCount = chosen?.length || 0;
+              const fileNames = chosen && fileCount > 0 
+                ? Array.from(chosen).map((f: any) => f.name).join(", ")
+                : null;
 
               return (
                 <FormItem>
-                  <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data File</FormLabel>
+                  <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground">Data Files</FormLabel>
                   <div className="block glass-panel rounded-xl p-6 border-dashed border-2 border-primary/30 hover:border-primary/50 transition-all">
                     <label className="cursor-pointer">
                       <input
@@ -188,10 +171,20 @@ export const UploadForm = ({ onUploadSuccess }: UploadFormProps = {}) => {
                         onBlur={onBlur}
                         onChange={onFileChange}
                         className="sr-only"
+                        multiple
                       />
                       <div className="flex flex-col items-center justify-center gap-2">
                         <Upload className="w-6 h-6 text-primary" />
-                        <p className="text-sm text-muted-foreground/60">{fileName ? `Ready: ${fileName}` : "CSV, XLSX"}</p>
+                        <p className="text-sm text-muted-foreground/60">
+                          {fileCount > 0 
+                            ? `${fileCount} file${fileCount > 1 ? 's' : ''} selected`
+                            : "Select multiple CSV/XLSX files"}
+                        </p>
+                        {fileNames && (
+                          <p className="text-xs text-muted-foreground/40 text-center max-w-full truncate">
+                            {fileNames}
+                          </p>
+                        )}
                       </div>
                     </label>
                   </div>

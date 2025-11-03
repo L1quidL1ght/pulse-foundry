@@ -5,7 +5,7 @@ import { Header } from "@/components/Header";
 import { KPICard } from "@/components/KPICard";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { DollarSign, Users, TrendingUp, Percent, Clock, Download, ArrowLeft, Loader2 } from "lucide-react";
+import { DollarSign, Users, TrendingUp, Percent, Clock, Download, ArrowLeft, Loader2, FileText } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { useToast } from "@/hooks/use-toast";
 
@@ -199,6 +199,40 @@ const ReportDetail = () => {
             </div>
           </div>
         </div>
+
+        {report.chart_data.individualReports && report.chart_data.individualReports.length > 0 && (
+          <div className="glass-panel rounded-2xl p-8 mb-8">
+            <h2 className="text-2xl font-bold mb-6">Reports Included</h2>
+            <div className="grid gap-4">
+              {report.chart_data.individualReports.map((fileReport: any, idx: number) => (
+                <div key={idx} className="glass-panel rounded-xl p-6 border border-primary/20">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4 flex-1">
+                      <FileText className="h-5 w-5 text-primary mt-1" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold mb-2">{fileReport.fileName}</h4>
+                        <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-muted-foreground">Net Sales</p>
+                            <p className="font-semibold">${fileReport.kpis.netSales.toFixed(2)}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">Guests</p>
+                            <p className="font-semibold">{fileReport.kpis.guests}</p>
+                          </div>
+                          <div>
+                            <p className="text-muted-foreground">PPA</p>
+                            <p className="font-semibold">${fileReport.kpis.ppa.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className="grid md:grid-cols-2 gap-8">
           <div className="glass-panel rounded-2xl p-6">

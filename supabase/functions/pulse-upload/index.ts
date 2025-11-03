@@ -46,25 +46,17 @@ serve(async (req) => {
     // Parse multipart form data
     const formData = await req.formData();
     const restaurantName = formData.get('restaurant_name') as string;
-    const reportType = formData.get('report_type') as string;
     const period = formData.get('period') as string;
-    const file = formData.get('file') as File;
+    const files = formData.getAll('files') as File[];
     // Use authenticated user ID instead of trusting client-provided value
     const userId = user.id;
 
-    console.log('Received upload:', { restaurantName, reportType, period, fileName: file?.name, userId });
+    console.log('Received upload:', { restaurantName, period, fileCount: files.length, userId });
 
     // Validate inputs
     if (!restaurantName || restaurantName.length > 100) {
       return new Response(
         JSON.stringify({ error: 'Invalid restaurant name' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!['sales', 'labor', 'performance'].includes(reportType)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid report type' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -76,50 +68,69 @@ serve(async (req) => {
       );
     }
 
-    if (!file || file.size > 10 * 1024 * 1024) {
+    if (!files || files.length === 0) {
       return new Response(
-        JSON.stringify({ error: 'File required and must be under 10MB' }),
+        JSON.stringify({ error: 'At least one file is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const fileName = file.name.toLowerCase();
-    if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-      return new Response(
-        JSON.stringify({ error: 'Only CSV and Excel files allowed' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validate each file
+    for (const file of files) {
+      if (!file || file.size > 10 * 1024 * 1024) {
+        return new Response(
+          JSON.stringify({ error: 'Each file must be under 10MB' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const fileName = file.name.toLowerCase();
+      if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+        return new Response(
+          JSON.stringify({ error: 'Only CSV and Excel files allowed' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
-    // Store file in Supabase Storage
-    const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-    const storageFileName = `${Date.now()}_${sanitizedFileName}`;
-    const fileBuffer = await file.arrayBuffer();
-    
-    console.log('Uploading file to storage:', storageFileName);
-    
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('pulse-data')
-      .upload(storageFileName, fileBuffer, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: false
-      });
+    // Process each file and collect parsed data
+    const individualReports: any[] = [];
+    const allDailyData = new Map<string, { sales: number; guests: number }>();
+    let totalNetSales = 0;
+    let totalGuests = 0;
+    const allCategories = new Map<string, number>();
 
-    if (uploadError) {
-      console.error('Storage upload error:', uploadError);
-      throw new Error(`Storage upload failed: ${uploadError.message}`);
-    }
+    for (const file of files) {
+      // Store file in Supabase Storage
+      const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const storageFileName = `${Date.now()}_${sanitizedFileName}`;
+      const fileBuffer = await file.arrayBuffer();
+      
+      console.log('Uploading file to storage:', storageFileName);
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('pulse-data')
+        .upload(storageFileName, fileBuffer, {
+          contentType: file.type || 'application/octet-stream',
+          upsert: false
+        });
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('pulse-data')
-      .getPublicUrl(storageFileName);
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw new Error(`Storage upload failed: ${uploadError.message}`);
+      }
 
-    console.log('File uploaded successfully:', publicUrl);
+      const { data: { publicUrl } } = supabase.storage
+        .from('pulse-data')
+        .getPublicUrl(storageFileName);
 
-    // Parse file and compute KPIs
-    const parsedBuffer = new Uint8Array(fileBuffer);
-    let headers: string[] = [];
-    let dataRows: any[] = [];
+      console.log('File uploaded successfully:', publicUrl);
+
+      // Parse file and compute KPIs
+      const parsedBuffer = new Uint8Array(fileBuffer);
+      const fileName = file.name.toLowerCase();
+      let headers: string[] = [];
+      let dataRows: any[] = [];
     
     // Helper function to find net sales column index (excludes gross)
     const findNetSalesColumnIndex = (headers: string[]): number => {
@@ -210,79 +221,98 @@ serve(async (req) => {
         Array.isArray(row) && row.length > 0
       ) as any[][];
     }
-    
-    const netSalesIdx = findNetSalesColumnIndex(headers);
-    
-    console.log('File headers:', headers);
-    console.log('Using net sales column index:', netSalesIdx);
-    
-    if (netSalesIdx === -1) {
-      throw new Error('Could not find net sales column in the data. Please ensure your file has a "Net Sales" column.');
+      
+      const netSalesIdx = findNetSalesColumnIndex(headers);
+      
+      console.log(`File: ${file.name}, Headers:`, headers);
+      console.log('Using net sales column index:', netSalesIdx);
+      
+      if (netSalesIdx === -1) {
+        console.warn(`Could not find net sales column in ${file.name}, skipping...`);
+        continue;
+      }
+      
+      // Parse data rows
+      const parsedRows = dataRows.map(values => ({
+        date: String(values[0] || ''),
+        netSales: parseNumeric(values[netSalesIdx]),
+        guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
+        category: values.length > 1 ? String(values[1] || '') : ''
+      })).filter(row => row.netSales > 0 || row.guests > 0);
+      
+      console.log(`Parsed ${parsedRows.length} data rows from ${file.name}`);
+      
+      // Compute KPIs from this file
+      const fileNetSales = parsedRows.reduce((sum, row) => sum + row.netSales, 0);
+      const fileGuests = parsedRows.reduce((sum, row) => sum + row.guests, 0);
+      const filePPA = fileGuests > 0 ? fileNetSales / fileGuests : 0;
+      
+      // Accumulate totals
+      totalNetSales += fileNetSales;
+      totalGuests += fileGuests;
+      
+      // Group by category
+      const categoryMap = new Map<string, number>();
+      parsedRows.forEach(row => {
+        if (row.category && row.netSales > 0) {
+          const current = categoryMap.get(row.category) || 0;
+          categoryMap.set(row.category, current + row.netSales);
+          
+          const globalCurrent = allCategories.get(row.category) || 0;
+          allCategories.set(row.category, globalCurrent + row.netSales);
+        }
+      });
+      
+      // Daily aggregation
+      const dailyMap = new Map<string, { sales: number; guests: number }>();
+      parsedRows.forEach(row => {
+        if (row.date) {
+          const current = dailyMap.get(row.date) || { sales: 0, guests: 0 };
+          dailyMap.set(row.date, {
+            sales: current.sales + row.netSales,
+            guests: current.guests + row.guests
+          });
+          
+          const globalCurrent = allDailyData.get(row.date) || { sales: 0, guests: 0 };
+          allDailyData.set(row.date, {
+            sales: globalCurrent.sales + row.netSales,
+            guests: globalCurrent.guests + row.guests
+          });
+        }
+      });
+      
+      // Store individual report data
+      individualReports.push({
+        fileName: file.name,
+        fileUrl: publicUrl,
+        kpis: {
+          netSales: fileNetSales,
+          guests: fileGuests,
+          ppa: filePPA,
+          categorySales: Object.fromEntries(categoryMap),
+          dailySales: Array.from(dailyMap.entries()).map(([date, data]) => ({ date, sales: data.sales }))
+        }
+      });
     }
-    
-    // Parse data rows
-    const parsedRows = dataRows.map(values => ({
-      date: String(values[0] || ''),
-      netSales: parseNumeric(values[netSalesIdx]),
-      guests: values.length > netSalesIdx + 1 ? parseNumeric(values[netSalesIdx + 1]) : 0,
-      category: values.length > 1 ? String(values[1] || '') : ''
-    })).filter(row => row.netSales > 0 || row.guests > 0);
-    
-    console.log(`Parsed ${parsedRows.length} data rows (gross sales excluded)`);
-    
-    // Compute KPIs from net sales data only
-    const totalNetSales = parsedRows.reduce((sum, row) => sum + row.netSales, 0);
-    const totalGuests = parsedRows.reduce((sum, row) => sum + row.guests, 0);
+
+    // Compute unified KPIs across all files
     const avgPPA = totalGuests > 0 ? totalNetSales / totalGuests : 0;
     
-    // Group by category for category mix
-    const categoryMap = new Map<string, number>();
-    parsedRows.forEach(row => {
-      if (row.category && row.netSales > 0) {
-        const current = categoryMap.get(row.category) || 0;
-        categoryMap.set(row.category, current + row.netSales);
-      }
-    });
-    
-    // Daily aggregation for charts
-    const dailyMap = new Map<string, { sales: number; guests: number }>();
-    parsedRows.forEach(row => {
-      if (row.date) {
-        const current = dailyMap.get(row.date) || { sales: 0, guests: 0 };
-        dailyMap.set(row.date, {
-          sales: current.sales + row.netSales,
-          guests: current.guests + row.guests
-        });
-      }
-    });
-    
-    const mockKPIs = {
-      netSales: totalNetSales > 0 ? totalNetSales : 125430.50,
-      guests: totalGuests > 0 ? totalGuests : 1247,
-      ppa: avgPPA > 0 ? avgPPA : 100.58,
-      tipPercent: 18.5, // Would need tip column in file
-      laborPercent: 28.3, // Would need labor data in file
-      categorySales: categoryMap.size > 0 
-        ? Object.fromEntries(categoryMap)
-        : { 'Food': 75000, 'Beverage': 35000, 'Desserts': 15430.50 },
-      dailySales: dailyMap.size > 0
-        ? Array.from(dailyMap.entries()).map(([date, data]) => ({ date, sales: data.sales }))
-        : Array.from({ length: 7 }, (_, i) => ({
-            date: `2024-11-${String(i + 1).padStart(2, '0')}`,
-            sales: 15000 + Math.random() * 5000
-          })),
-      ppaTrend: dailyMap.size > 0
-        ? Array.from(dailyMap.entries()).map(([date, data]) => ({ 
-            date, 
-            ppa: data.guests > 0 ? data.sales / data.guests : 0 
-          }))
-        : Array.from({ length: 7 }, (_, i) => ({
-            date: `2024-11-${String(i + 1).padStart(2, '0')}`,
-            ppa: 95 + Math.random() * 15
-          }))
+    const unifiedKPIs = {
+      netSales: totalNetSales,
+      guests: totalGuests,
+      ppa: avgPPA,
+      tipPercent: 18.5, // Would need tip column in files
+      laborPercent: 28.3, // Would need labor data in files
+      categorySales: Object.fromEntries(allCategories),
+      dailySales: Array.from(allDailyData.entries()).map(([date, data]) => ({ date, sales: data.sales })),
+      ppaTrend: Array.from(allDailyData.entries()).map(([date, data]) => ({ 
+        date, 
+        ppa: data.guests > 0 ? data.sales / data.guests : 0 
+      }))
     };
 
-    console.log('Computed KPIs (net sales only):', mockKPIs);
+    console.log('Computed unified KPIs across all files:', unifiedKPIs);
 
     // Call OpenAI for analysis
     const openAIKey = Deno.env.get('OPENAI_API_KEY');
@@ -294,6 +324,8 @@ serve(async (req) => {
 Keep your response concise, data-driven, and actionable.`;
 
     console.log('Calling OpenAI for analysis');
+
+    const filesContext = individualReports.map(r => `- ${r.fileName}: $${r.kpis.netSales.toFixed(2)} net sales, ${r.kpis.guests} guests`).join('\n');
 
     const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -307,7 +339,7 @@ Keep your response concise, data-driven, and actionable.`;
           { role: 'system', content: systemPrompt },
           { 
             role: 'user', 
-            content: `Analyze these restaurant metrics for ${restaurantName} (${period}):\n\nNet Sales: $${mockKPIs.netSales}\nGuests: ${mockKPIs.guests}\nPPA: $${mockKPIs.ppa}\nTip %: ${mockKPIs.tipPercent}%\nLabor %: ${mockKPIs.laborPercent}%\n\nCategory Mix:\n${Object.entries(mockKPIs.categorySales).map(([cat, sales]) => `- ${cat}: $${sales}`).join('\n')}`
+            content: `Analyze these restaurant metrics for ${restaurantName} (${period}):\n\nTotal Net Sales: $${unifiedKPIs.netSales}\nTotal Guests: ${unifiedKPIs.guests}\nAverage PPA: $${unifiedKPIs.ppa}\nTip %: ${unifiedKPIs.tipPercent}%\nLabor %: ${unifiedKPIs.laborPercent}%\n\nFiles Analyzed:\n${filesContext}\n\nCategory Mix:\n${Object.entries(unifiedKPIs.categorySales).map(([cat, sales]) => `- ${cat}: $${sales}`).join('\n')}`
           }
         ],
       }),
@@ -332,23 +364,24 @@ Keep your response concise, data-driven, and actionable.`;
       actions: analysisParts.filter((l: string) => l.includes('•') || l.includes('-')).slice(3, 6)
     };
 
-    // Store in database
+    // Store unified report in database
     const reportData: any = {
       restaurant_name: restaurantName,
-      report_type: reportType,
+      report_type: 'multi-file',
       period: period,
-      file_url: publicUrl,
-      kpis: mockKPIs,
+      file_url: individualReports.map(r => r.fileUrl).join(','),
+      kpis: unifiedKPIs,
       agent: analysis,
       chart_data: {
-        dailySales: mockKPIs.dailySales,
-        ppaTrend: mockKPIs.ppaTrend,
-        categoryMix: mockKPIs.categorySales
+        dailySales: unifiedKPIs.dailySales,
+        ppaTrend: unifiedKPIs.ppaTrend,
+        categoryMix: unifiedKPIs.categorySales,
+        individualReports: individualReports
       },
       user_id: userId  // Always set from authenticated user
     };
 
-    console.log('Inserting report into database');
+    console.log('Inserting unified report into database');
 
     const { data: insertData, error: insertError } = await supabase
       .from('pulse_reports')
