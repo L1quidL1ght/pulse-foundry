@@ -11,6 +11,17 @@ import { Logo } from "@/components/Logo";
 import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  // In dev mode, bypass auth and go straight to dashboard
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      navigate("/dashboard");
+      return;
+    }
+  }, [navigate]);
+
   const [isSignUp, setIsSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
   const [isSettingNewPassword, setIsSettingNewPassword] = useState(false);
@@ -19,8 +30,6 @@ const Auth = () => {
   const [newPassword, setNewPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
 
   // Check if user is coming from password reset email
   useEffect(() => {
