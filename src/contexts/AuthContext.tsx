@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     // In dev mode, bypass authentication
     if (DEV_MODE) {
-      setUser({ id: 'dev-user', email: 'dev@example.com' } as User);
-      setSession({ user: { id: 'dev-user', email: 'dev@example.com' } } as Session);
+      setUser({ id: '00000000-0000-0000-0000-000000000000', email: 'dev@example.com' } as User);
+      setSession({ user: { id: '00000000-0000-0000-0000-000000000000', email: 'dev@example.com' } } as Session);
       setIsAdmin(true);
       setLoading(false);
       return;
