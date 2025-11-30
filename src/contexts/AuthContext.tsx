@@ -15,6 +15,9 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Dev mode bypass - set to true to skip authentication during development
+const DEV_MODE = import.meta.env.DEV;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -22,6 +25,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // In dev mode, bypass authentication
+    if (DEV_MODE) {
+      setUser({ id: 'dev-user', email: 'dev@example.com' } as User);
+      setSession({ user: { id: 'dev-user', email: 'dev@example.com' } } as Session);
+      setIsAdmin(true);
+      setLoading(false);
+      return;
+    }
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {

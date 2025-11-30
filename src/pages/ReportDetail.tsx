@@ -41,6 +41,9 @@ const ReportDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Skip auth check in dev mode
+    if (import.meta.env.DEV) return;
+    
     if (!authLoading && !user) {
       navigate("/auth");
     }
